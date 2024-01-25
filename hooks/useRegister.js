@@ -1,16 +1,32 @@
 import axios from "axios";
 import { apiURL } from "../helpers/constants";
-import { useAuthContext } from "./useAuthContext";
 
 const useRegister = () => {
-  const { dispatch } = useAuthContext();
-  const register = async ({ name, email, password }) => {
+  const register = async ({
+    name,
+    email,
+    password,
+    age,
+    gender,
+    height,
+    weight,
+    activityLevel,
+    weightGoal,
+  }) => {
     try {
       const response = await axios.post(`${apiURL}/auth/register`, {
         name,
         email,
         password,
+        age,
+        gender,
+        height,
+        weight,
+        activityLevel,
+        weightGoal,
       });
+
+      console.log(response);
 
       const data = response?.data;
 

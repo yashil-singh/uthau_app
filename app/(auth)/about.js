@@ -1,71 +1,46 @@
-import { ScrollView, View } from "react-native";
-import React, { useState } from "react";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { colors } from "../../../helpers/theme";
-import DropdownPicker from "../../../components/DropdownPicker";
-import InputFields from "../../../components/InputFields";
+import { KeyboardAvoidingView, View } from "react-native";
+import { useRouter } from "expo-router";
+import { colors } from "../../helpers/theme";
+import DropdownPicker from "../../components/DropdownPicker";
+import InputFields from "../../components/InputFields";
 import { Controller, useForm } from "react-hook-form";
-import { ERROR_MESSAGES } from "../../../helpers/constants";
-import StyledButton from "../../../components/StyledButton";
-import useAbout from "../../../hooks/useAbout";
-import { BodyText } from "../../../components/StyledText";
+import { ERROR_MESSAGES } from "../../helpers/constants";
+import StyledButton from "../../components/StyledButton";
+import { BodyText } from "../../components/StyledText";
+import { useRegisterContext } from "../../hooks/useRegisterContext";
 
-const aboutYou = () => {
-  const { email } = useLocalSearchParams();
-
-  const genderOptions = [
-    { label: "Select your gender", value: null },
-    { label: "Male", value: "Male" },
-    { label: "Female", value: "Female" },
-    { label: "Non-Binary", value: "Non-Binary" },
-  ];
-
-  const { storeAboutInfo } = useAbout();
+const about = () => {
+  const { dispatch } = useRegisterContext();
   const router = useRouter();
-  const [error, setError] = useState(null);
 
   const {
     control,
     formState: { errors, isSubmitting },
     handleSubmit,
-    reset,
-  } = useForm({ mode: "onSubmit" });
+  } = useForm();
 
-  const onSubmit = async (data) => {
-    setError(null);
+  const genderOptions = [
+    { label: "Select your gender", value: null },
+    { label: "Male", value: "Male" },
+    { label: "Female", value: "Female" },
+  ];
 
-    const { age, genderValue, height, weight } = data;
-    const gender = genderValue.value;
-
-    try {
-      const response = await storeAboutInfo({
-        email,
-        age,
-        gender,
-        height,
-        weight,
-      });
-      if (response.success) {
-        reset();
-        router.push("/accountCreated");
-        setError(null);
-      } else {
-        setError(response.error);
-      }
-    } catch (error) {
-      console.log("🚀 ~ file: aboutYou.js:47 ~ error:", error);
-    }
+  const nextPage = (data) => {
+    dispatch({ type: "SET_DATA", payload: data });
+    router.push("/goal");
   };
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{
         flex: 1,
         padding: 25,
         backgroundColor: colors.white,
+        justifyContent: "space-between",
       }}
     >
-      <View style={{ gap: 15, flex: 1, marginBottom: 150 }}>
+      <View style={{ gap: 15 }}>
         <BodyText style={{ color: colors.gray, fontSize: 16 }}>
           Please answers these correctly.
         </BodyText>
@@ -75,6 +50,8 @@ const aboutYou = () => {
           name="age"
           rules={{
             required: { value: true, message: ERROR_MESSAGES.REQUIRED },
+            min: { value: 5, message: "Age must be at least 5 years." },
+            max: { value: 100, message: "Age must be at most 100 years." },
           }}
           render={({ field: { onChange, value } }) => (
             <InputFields
@@ -94,7 +71,12 @@ const aboutYou = () => {
           control={control}
           name="genderValue"
           rules={{
-            required: { value: true, message: ERROR_MESSAGES.REQUIRED },
+            validate: (value) => {
+              if (value?.value === null || value?.value === undefined) {
+                return ERROR_MESSAGES.REQUIRED;
+              }
+              return true; // Validation passed
+            },
           }}
           render={({ field: { onChange, value } }) => (
             <DropdownPicker
@@ -103,6 +85,7 @@ const aboutYou = () => {
               options={genderOptions}
               value={value?.value}
               onChange={onChange}
+              errorText={errors.genderValue?.message}
             />
           )}
         />
@@ -112,6 +95,8 @@ const aboutYou = () => {
           name="height"
           rules={{
             required: { value: true, message: ERROR_MESSAGES.REQUIRED },
+            min: { value: 90, message: "Height must be at least 90cm." },
+            max: { value: 250, message: "Height must be at most 250cm." },
           }}
           render={({ field: { onChange, value } }) => (
             <InputFields
@@ -132,6 +117,8 @@ const aboutYou = () => {
           name="weight"
           rules={{
             required: { value: true, message: ERROR_MESSAGES.REQUIRED },
+            min: { value: 15, message: "Weight must be at least 15kg." },
+            max: { value: 200, message: "Weight must be at most 200kg." },
           }}
           render={({ field: { onChange, value } }) => (
             <InputFields
@@ -147,16 +134,15 @@ const aboutYou = () => {
           )}
         />
       </View>
-      <View style={{ marginTop: 180 }}>
-        <StyledButton
-          title="Next"
-          isLoading={isSubmitting}
-          isDisabled={isSubmitting}
-          onPress={handleSubmit(onSubmit)}
-        />
-      </View>
-    </ScrollView>
+
+      <StyledButton
+        title="Next"
+        isLoading={isSubmitting}
+        isDisabled={isSubmitting}
+        onPress={handleSubmit(nextPage)}
+      />
+    </KeyboardAvoidingView>
   );
 };
 
-export default aboutYou;
+export default about;

@@ -64,9 +64,10 @@ router.post("/login", async (req, res) => {
 
     const user_id = user.user_id;
     const isVerified = user.isverified;
+    const user_email = user.email;
 
     const token = jwt.sign(
-      { user_id: user_id, isVerified: isVerified },
+      { user_id: user_id, isVerified: isVerified, user_email: user_email },
       process.env.SECRET_KEY
     );
 
@@ -83,18 +84,9 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Endpoint to register a user
-router.post("/register", async (req, res) => {
+router.post("/check-user", async (req, res) => {
   try {
-    // Retrieve the body of the request
-    const { name, email, password } = req.body;
-
-    if (!validator.isStrongPassword(password)) {
-      return res.status(409).json({
-        message:
-          "Password is not strong enough. Must include atleast one uppercase and lowercase letter, number, and special character",
-      });
-    }
+    const { email, password } = req.body;
 
     // Check if user is already registered
     const isRegistered = await pool.query(
@@ -103,18 +95,105 @@ router.post("/register", async (req, res) => {
     );
 
     if (isRegistered.rowCount != 0) {
-      return res.status(401).json({ message: "Email already registered." });
+      return res.status(409).json({
+        valid: false,
+        message: "Email is already registered.",
+      });
     }
+
+    if (!validator.isStrongPassword(password)) {
+      return res.status(409).json({
+        valid: false,
+        message:
+          "Password is not strong enough. Must include atleast one uppercase and lowercase letter, number, and special character",
+      });
+    }
+
+    return res.json({ valid: true });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+// Endpoint to register a user
+router.post("/register", async (req, res) => {
+  try {
+    // Retrieve the body of the request
+    const {
+      name,
+      email,
+      password,
+      age,
+      gender,
+      height,
+      weight,
+      activityLevel,
+      weightGoal,
+    } = req.body;
 
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const verificationToken = crypto.randomBytes(20).toString("hex");
 
+    // Calorie calculation
+
+    // Calorie intake
+    var bmr = 0;
+
+    // Calorie burn
+    var tdee = 0;
+
+    // Activity multiplier
+    var activityPoints = 1;
+
+    if (gender === "Male") {
+      bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+    } else {
+      bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+    }
+
+    if (activityLevel == "Not Active") {
+      activityPoints = 1.2;
+    } else if (activityLevel == "Lightly Active") {
+      activityPoints = 1.37;
+    } else if (activityLevel == "Moderately Active") {
+      activityPoints = 1.55;
+    } else if (activityLevel == "Very Active") {
+      activityPoints = 1.725;
+    } else {
+      activityPoints = 1;
+    }
+
+    tdee = bmr * activityPoints;
+
+    if (weightGoal == "Lose Weight") {
+      bmr -= 500;
+      tdee = bmr * activityPoints;
+    } else if (weightGoal == "Gain Weight") {
+      tdee = bmr * activityPoints;
+      bmr += 500;
+    }
+
     // Insert the user details to the database
     const result = await pool.query(
-      `INSERT INTO users (name, email, password, verification_token) VALUES ($1, $2, $3, $4) RETURNING *`,
-      [name, email, hashedPassword, verificationToken]
+      `INSERT INTO users (name, email, password, age, gender, height, weight, activity_level, weight_goal, calorie_burn, calorie_intake, verification_token) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [
+        name,
+        email,
+        hashedPassword,
+        age,
+        gender,
+        height,
+        weight,
+        activityLevel,
+        weightGoal,
+        Math.round(tdee),
+        Math.round(bmr),
+        verificationToken,
+      ]
     );
 
     const user = result.rows[0];
@@ -126,14 +205,10 @@ router.post("/register", async (req, res) => {
       email,
       "Email Verification",
       `Hi ${fName},\nYou are a step closer to starting your fitness journey. 
-      Please click the following link to verify your email: ${process.env.API_URI}/verify/${user_id}/${verificationToken}\nThank you,\nUthau Team`
+      Please click the following link to verify your email: ${process.env.API_URI}/auth/verify/${user_id}/${verificationToken}\nThank you,\nUthau Team`
     );
 
-    const token = jwt.sign({ user_id: user_id }, process.env.SECRET_KEY);
-
-    return res
-      .status(201)
-      .json({ message: "Registration successful.", token: token });
+    return res.status(201).json({ message: "Registration successful." });
   } catch (error) {
     console.log("🚀 ~ file: authRoute.js:69 ~ error:", error);
     return res
@@ -142,12 +217,44 @@ router.post("/register", async (req, res) => {
   }
 });
 
+router.post("/get-calories", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const result = await pool.query(
+      "SELECT calorie_burn, calorie_intake FROM users WHERE email = $1",
+      [email]
+    );
+
+    console.log(result);
+
+    if (result.rowCount > 0) {
+      const user = result.rows[0];
+      const calorieBurn = user.calorie_burn;
+      const calorieIntake = user.calorie_intake;
+      return res.status(201).json({
+        success: true,
+        calorieBurn: calorieBurn,
+        calorieIntake: calorieIntake,
+      });
+    } else {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+  } catch (error) {
+    console.log("Error from check calorie", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error. Try again later.",
+    });
+  }
+});
+
 router.post("/store-about/:email", async (req, res) => {
   try {
     const { age, gender, height, weight } = req.body;
-    console.log(req.body);
     const { email } = req.params;
-    console.log("🚀 ~ file: authRoute.js:150 ~ email:", email);
 
     if (!age || !gender || !height || !weight) {
       return res.status(401).json({ message: "All the fields are required" });
@@ -155,8 +262,6 @@ router.post("/store-about/:email", async (req, res) => {
 
     const roundedWeight = Math.abs(Number(weight).toFixed(2));
     const roundedHeight = Math.abs(Number(height).toFixed(2));
-
-    console.log(age, gender, roundedHeight, roundedWeight, email);
 
     // Insert the user details to the database
     const result = await pool.query(
@@ -178,7 +283,7 @@ router.post("/store-about/:email", async (req, res) => {
 });
 
 // Endpoint to verify a user with their email
-router.post("/verify/:id/:token", async (req, res) => {
+router.get("/verify/:user_id/:verificationToken", async (req, res) => {
   try {
     // Retrieve values from params
     const { user_id, verificationToken } = req.params;
@@ -190,7 +295,7 @@ router.post("/verify/:id/:token", async (req, res) => {
     );
 
     if (result.rowCount == 0) {
-      return res.status(401).json({ message: "User not found." });
+      return res.status(401).json({ message: "Invalid request." });
     }
 
     // Update the verification status of the user
@@ -215,8 +320,8 @@ router.post("/resend-verification", async (req, res) => {
     return res.status(401).json({ message: "Invalid request." });
   }
 
-  const result = await pool.query("SELECT * FROM users WHERE user_id = $1", [
-    id,
+  const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+    email,
   ]);
 
   if (result.rowCount == 0) {
@@ -224,6 +329,7 @@ router.post("/resend-verification", async (req, res) => {
   }
 
   const user = result.rows[0];
+  const user_id = user.user_id;
   const fullName = user.name;
   const fName = fullName.split(" ")[0];
 
@@ -238,7 +344,7 @@ router.post("/resend-verification", async (req, res) => {
       email,
       "Email Verification",
       `Hi ${fName},\nYou are a step closer to starting your fitness journey. 
-      Please click the following link to verify your email: ${process.env.API_URI}/verify/${user_id}/${verificationToken}\nThank you,\nUthau Team`
+      Please click the following link to verify your email: ${process.env.API_URI}/auth/verify/${user_id}/${verificationToken}\nThank you,\nUthau Team`
     );
 
     return res.status(200).json({ message: "Email sent successfully." });

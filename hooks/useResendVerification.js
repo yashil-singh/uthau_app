@@ -7,6 +7,7 @@ const useResendVerification = () => {
       const response = await axios.post(`${apiURL}/auth/resend-verification`, {
         email,
       });
+
       return {
         success: true,
         message: response?.data.message,
@@ -16,7 +17,7 @@ const useResendVerification = () => {
 
       return {
         success: false,
-        error: error.response?.data.message,
+        message: error.response?.data.message,
       };
     }
   };
