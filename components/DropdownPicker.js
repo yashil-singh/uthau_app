@@ -4,7 +4,14 @@ import { Dropdown } from "react-native-element-dropdown";
 import { colors } from "../helpers/theme";
 import { BodyText } from "./StyledText";
 
-const DropdownPicker = ({ title, options, placeholder, value, onChange }) => {
+const DropdownPicker = ({
+  title,
+  options,
+  placeholder,
+  value,
+  onChange,
+  errorText,
+}) => {
   return (
     <View style={{ gap: 5 }}>
       <BodyText>{title}</BodyText>
@@ -23,6 +30,17 @@ const DropdownPicker = ({ title, options, placeholder, value, onChange }) => {
         value={value}
         onChange={onChange}
       />
+
+      {errorText && (
+        <BodyText
+          style={{
+            color: colors.error.normal,
+            marginVertical: errorText ? 5 : 0,
+          }}
+        >
+          {errorText}
+        </BodyText>
+      )}
     </View>
   );
 };

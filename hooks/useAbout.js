@@ -2,13 +2,21 @@ import axios from "axios";
 import { apiURL } from "../helpers/constants";
 
 const useAbout = () => {
-  const storeAboutInfo = async ({ email, age, gender, height, weight }) => {
+  const storeAboutInfo = async ({
+    email,
+    age,
+    gender,
+    height,
+    weight,
+    calorieBurn,
+  }) => {
     try {
       const response = await axios.post(`${apiURL}/auth/store-about/${email}`, {
         age,
         gender,
         height,
         weight,
+        calorieBurn,
       });
 
       const data = response?.data;

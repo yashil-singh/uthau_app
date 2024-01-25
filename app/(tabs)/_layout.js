@@ -7,7 +7,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function _layout() {
   const { user } = useAuthContext();
-  const email = user.email;
+  const email = user?.email;
   const navigation = useNavigation();
 
   useEffect(() => {

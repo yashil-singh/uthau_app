@@ -13,7 +13,6 @@ const useLogin = () => {
         keepLoggedIn,
       });
       const data = await response?.data;
-      console.log("🚀 ~ file: useLogin.js:16 ~ data:", data);
 
       if (keepLoggedIn) {
         await SecureStore.setItemAsync("authToken", JSON.stringify(data));
@@ -26,7 +25,6 @@ const useLogin = () => {
         data,
       };
     } catch (error) {
-      console.log("ERROR FROM USELOGIN: ", error);
       return {
         success: false,
         error: error.response?.data.message,
