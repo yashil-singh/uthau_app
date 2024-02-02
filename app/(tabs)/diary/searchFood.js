@@ -1,37 +1,89 @@
 import {
   FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
 import { Searchbar } from "react-native-paper";
 import { colors } from "../../../helpers/theme";
-import { BodyText, HeaderText } from "../../../components/StyledText";
+import {
+  BodyText,
+  HeaderText,
+  LinkText,
+  SubHeaderText,
+} from "../../../components/StyledText";
 import useFoodDiary from "../../../hooks/useFoodDiary";
 import { FontAwesome } from "@expo/vector-icons";
 import { Dropdown } from "react-native-element-dropdown";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Feather } from "@expo/vector-icons";
+import StyledButton from "../../../components/StyledButton";
 
 const searchFood = () => {
+  const router = useRouter();
+
+  const { searchFood, logFood } = useFoodDiary();
+
+  const { id, date } = useLocalSearchParams();
+
+  // User's search query
   const [searchQuery, setSearchQuery] = useState("");
   const onChangeSearch = (query) => setSearchQuery(query);
 
-  const { searchFood } = useFoodDiary();
-  const [isDisabled, setIsDisabled] = useState(false);
   const [error, setError] = useState(null);
-  const [searchResults, setSearchResults] = useState([]);
+  const [addError, setAddError] = useState(null);
+  const [servingError, setServingError] = useState(null);
 
-  const [open, setOpen] = useState(false);
+  // Modal related states
+  const [openModal, setOpenModal] = useState(false);
+  const [openQuantityModal, setOpenQuantityModal] = useState(false);
+  const [modalData, setModalData] = useState(null);
+  const [selectedServing, setSelectedServing] = useState(null);
+  const [quantity, setQuantity] = useState("1");
   const [selectedMeal, setSelectedMeal] = useState(null);
-  const [items, setItems] = useState([
-    { label: "Select a meal", value: null },
-    { label: "Breakfast", value: "breakfast" },
-    { label: "Lunch", value: "lunch" },
-    { label: "Snacks", value: "snacks" },
-    { label: "Dinner", value: "dinner" },
-  ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDisabled, setIsDisabled] = useState(false);
+  const [isLogLoading, setIsLogLoading] = useState(false);
+  const [isLogDisabled, setIsLogDisabled] = useState(false);
+
+  // Nutrient values
+  const [calories, setCalories] = useState(0);
+  const [protein, setProtein] = useState(0);
+  const [fat, setFat] = useState(0);
+  const [carbs, setCarbs] = useState(0);
+
+  const toggleModal = () => {
+    setOpenModal(!openModal);
+    setModalData(null);
+    setQuantity("1");
+    setAddError(null);
+    setError(null);
+    setSelectedMeal(null);
+    setSelectedServing(null);
+    setCalories(0);
+    setCarbs(0);
+    setFat(0);
+    setProtein(0);
+  };
+
+  const toggleQuantityModal = () => {
+    setServingError(null);
+    if (quantity <= 0) {
+      setServingError("Quantity must be greater than zero.");
+      return;
+    }
+    setOpenQuantityModal(!openQuantityModal);
+  };
+
+  // Options for meals
   const meals = [
     { label: "Select a meal", value: null },
     { label: "Breakfast", value: "breakfast" },
@@ -39,17 +91,98 @@ const searchFood = () => {
     { label: "Snacks", value: "snacks" },
     { label: "Dinner", value: "dinner" },
   ];
-  const handleValueChange = (itemValue, itemIndex) =>
-    setSelectedMeal(itemValue);
 
-  const onSubmit = async () => {
+  // To filter out all the measures
+  const getMeasures = (measures) => {
+    if (!measures) return [];
+
+    const filteredMeasures = measures.flatMap((measure) => {
+      if (measure.qualified) {
+        return measure.qualified.map((qualified) => ({
+          label: `1.0 ${measure.label} ${qualified.qualifiers[0].label}`,
+          weight: qualified.weight,
+        }));
+      } else {
+        return [
+          {
+            label: `1.0 ${measure.label}`,
+            weight: measure.weight,
+          },
+        ];
+      }
+    });
+    // Add null value at the beginning of the array
+    filteredMeasures.unshift({
+      label: "Select a serving size",
+      weight: null,
+    });
+    return filteredMeasures;
+  };
+
+  const convertMetric = ({ convertingMetric }) => {
+    if (!quantity || !selectedServing) {
+      return 0;
+    }
+
     try {
+      const convertedQuantity = parseFloat(quantity);
+      const convertedMetric =
+        (convertingMetric / 100) * selectedServing * convertedQuantity;
+
+      return convertedMetric;
+    } catch (error) {
+      setAddError("Invalid quantity entered.");
+      return 0;
+    }
+  };
+
+  useEffect(() => {
+    // Calculate nutrient values based on the converted metric
+    const calculatedCalories = convertMetric({
+      convertingMetric: modalData?.food.nutrients.ENERC_KCAL,
+    });
+    const calculatedProtein = convertMetric({
+      convertingMetric: modalData?.food.nutrients.PROCNT,
+    });
+    const calculatedFat = convertMetric({
+      convertingMetric: modalData?.food.nutrients.FAT,
+    });
+    const calculatedCarbs = convertMetric({
+      convertingMetric: modalData?.food.nutrients.CHOCDF,
+    });
+
+    setCalories(calculatedCalories.toFixed(1));
+    setProtein(calculatedProtein.toFixed(1));
+    setFat(calculatedFat.toFixed(1));
+    setCarbs(calculatedCarbs.toFixed(1));
+  }, [selectedServing, quantity]);
+
+  const [searchResults, setSearchResults] = useState([]);
+
+  // Get search results for user's query
+  const onSearch = async () => {
+    try {
+      setSearchResults([]);
       setIsDisabled(true);
       setError(null);
-      const response = await searchFood({ keyword: searchQuery });
+      const response = await searchFood({ searchQuery });
+
       if (response.success) {
         // If the response is successful, update the state with the search results
-        setSearchResults(response.data);
+        const foodData = response?.data.hints;
+
+        const foodMap = new Map();
+
+        const uniqueFood = foodData.filter((food) => {
+          if (!foodMap.has(food.food.foodId)) {
+            foodMap.set(food.food.foodId, true);
+            return true;
+          }
+
+          return false;
+        });
+
+        setSearchResults(uniqueFood);
         if (searchQuery.length > 0 && response.data.length === 0) {
           // Display "No results found" if there are no search results
           setError("No results found");
@@ -57,88 +190,411 @@ const searchFood = () => {
       } else {
         setError("Unexpected error occurred. Try again later.");
       }
-      console.log(response);
       setIsDisabled(false);
     } catch (error) {
       console.log("🚀 ~ file: searchFood.js:23 ~ error:", error);
       setError("Unexpected error occured. Try again later.");
     }
   };
+
+  // Log the food
+  const onLogFood = async () => {
+    setIsLogDisabled(true);
+    setIsLogLoading(true);
+    if (selectedMeal == null) {
+      setAddError("Please select a meal");
+      setIsLogDisabled(false);
+      setIsLogLoading(false);
+      return;
+    } else if (selectedServing == null) {
+      setAddError("Please select a serving size");
+      setIsLogDisabled(false);
+      setIsLogLoading(false);
+      return;
+    } else if (quantity <= 0) {
+      setAddError("Quantity must be greater than zero.");
+      setIsLogDisabled(false);
+      setIsLogLoading(false);
+      return;
+    }
+    try {
+      if (modalData == null || id == null || date == null) {
+        setAddError("Cannot complete this request at the moment.");
+        setIsLogDisabled(false);
+        setIsLogLoading(false);
+        return;
+      }
+
+      console.log(id);
+
+      const response = await logFood({
+        user_id: id,
+        date,
+        foodId: modalData?.food.foodId || null,
+        label: modalData?.food.label || null,
+        calories,
+        carbs,
+        fat,
+        protein,
+        quantity,
+        selectedMeal,
+      });
+
+      console.log(response.data);
+
+      if (response.success) {
+        setAddError(null);
+        setIsLogDisabled(false);
+        setIsLogLoading(false);
+        setOpenModal(false);
+        return;
+      }
+
+      setAddError("Cannot complete this request at the moment.");
+      setIsLogDisabled(false);
+      setIsLogLoading(false);
+    } catch (error) {
+      console.log("🚀 ~ error searchFood.js line 406:", error);
+      setError("Unexpected error occured. Try again later.");
+    }
+    setCalories(0);
+    setCarbs(0);
+    setFat(0);
+    setProtein(0);
+    setOpenModal(false);
+  };
+
   return (
-    <MainContainer gap={15}>
-      <Searchbar
-        placeholder="Search food"
-        style={{ borderRadius: 6, backgroundColor: "#f2f2f2" }}
-        iconColor={colors.primary.normal}
-        onChangeText={onChangeSearch}
-        value={searchQuery}
-        onIconPress={onSubmit}
-        onClearIconPress={() => setSearchResults([])}
-        editable={!isDisabled}
-      />
-
-      <View style={styles.container}>
-        <Dropdown
-          style={styles.dropdown}
-          placeholderStyle={styles.placeholderStyle}
-          selectedTextStyle={styles.selectedTextStyle}
-          inputSearchStyle={styles.inputSearchStyle}
-          iconStyle={styles.iconStyle}
-          data={meals}
-          maxHeight={300}
-          labelField="label"
-          valueField="value"
-          placeholder="Select a meal"
-          value={selectedMeal}
-          onChange={(item) => {
-            setSelectedMeal(item.value);
-          }}
-        />
-      </View>
-      {searchResults.length > 0 && (
-        <FlatList
-          data={searchResults}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={{
-                flex: 1,
-                borderWidth: 1,
-                borderColor: "#e3e3e3",
-                padding: 15,
-                justifyContent: "space-between",
-                flexDirection: "row",
-                alignItems: "center",
-                marginBottom: 10,
-              }}
-              key={item.id}
-            >
-              <HeaderText style={{ fontSize: 18 }}>
-                {item.name.charAt(0).toUpperCase() + item.name.slice(1)}
-              </HeaderText>
-              <FontAwesome name="plus" size={24} color={colors.primary.dark} />
-            </TouchableOpacity>
-          )}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-
-      {error && (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      extraHeight={180}
+      enableOnAndroid={true}
+    >
+      <Modal
+        transparent
+        animationType="fade"
+        visible={openModal}
+        onRequestClose={toggleModal}
+      >
         <View
           style={{
             flex: 1,
-            alignItems: "center",
             justifyContent: "center",
-            marginTop: 100,
+            alignItems: "center",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            paddingVertical: 50,
+            paddingHorizontal: 15,
           }}
         >
-          <BodyText style={{ textAlign: "center", fontSize: 18 }}>
-            No results found.
-          </BodyText>
+          <View
+            style={{
+              backgroundColor: colors.white,
+              flex: 1,
+              width: "100%",
+              borderRadius: 6,
+              padding: 15,
+              gap: 15,
+              justifyContent: "space-between",
+            }}
+          >
+            <View style={{ gap: 15 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <Feather
+                  name="x"
+                  size={25}
+                  color={colors.primary.dark}
+                  onPress={toggleModal}
+                />
+              </View>
+              <View>
+                <HeaderText style={{ fontSize: 21 }}>
+                  {modalData?.food.label}
+                </HeaderText>
+                <BodyText>Also known as: {modalData?.food.knownAs}</BodyText>
+              </View>
+
+              <View style={styles.optionContainer}>
+                <SubHeaderText>Meal</SubHeaderText>
+                <Dropdown
+                  style={styles.dropdown}
+                  placeholderStyle={styles.placeholderStyle}
+                  selectedTextStyle={styles.selectedTextStyle}
+                  inputSearchStyle={styles.inputSearchStyle}
+                  data={meals}
+                  maxHeight={300}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select a meal"
+                  value={selectedMeal}
+                  onChange={(item) => {
+                    setSelectedMeal(item.value);
+                  }}
+                  renderRightIcon={() => null}
+                />
+              </View>
+              <View style={styles.optionContainer}>
+                <SubHeaderText>Quantity</SubHeaderText>
+                <Pressable onPress={() => setOpenQuantityModal(true)}>
+                  <BodyText style={{ color: colors.info.dark }}>
+                    {quantity}
+                  </BodyText>
+                </Pressable>
+              </View>
+              <View style={styles.optionContainer}>
+                <SubHeaderText>Serving Size</SubHeaderText>
+                <Dropdown
+                  style={styles.dropdown}
+                  placeholderStyle={styles.placeholderStyle}
+                  selectedTextStyle={styles.selectedTextStyle}
+                  inputSearchStyle={styles.inputSearchStyle}
+                  data={getMeasures(modalData?.measures)}
+                  maxHeight={500}
+                  labelField="label"
+                  valueField="weight"
+                  placeholder="Select a serving size"
+                  value={selectedServing}
+                  onChange={(item) => {
+                    setSelectedServing(item.weight);
+                  }}
+                  renderRightIcon={() => null}
+                />
+              </View>
+              <View
+                style={{
+                  ...styles.optionContainer,
+                  justifyContent: "space-evenly",
+                  gap: 25,
+                }}
+              >
+                <View style={styles.nutrientsContainer}>
+                  <HeaderText
+                    style={{ fontSize: 21, color: colors.warning.normal }}
+                  >
+                    {calories}
+                  </HeaderText>
+                  <BodyText style={{ color: colors.warning.normal }}>
+                    Cal
+                  </BodyText>
+                </View>
+                <View style={styles.nutrientsContainer}>
+                  <HeaderText style={{ fontSize: 21, color: "#00bfbf" }}>
+                    {carbs}g
+                  </HeaderText>
+                  <BodyText style={{ color: "#00bfbf" }}>Carbs</BodyText>
+                </View>
+                <View style={styles.nutrientsContainer}>
+                  <HeaderText style={{ fontSize: 21, color: "#6a607b" }}>
+                    {fat}g
+                  </HeaderText>
+                  <BodyText style={{ color: "#6a607b" }}>Fat</BodyText>
+                </View>
+                <View style={styles.nutrientsContainer}>
+                  <HeaderText style={{ fontSize: 21, color: "#cd7f32" }}>
+                    {protein}g
+                  </HeaderText>
+                  <BodyText style={{ color: "#cd7f32" }}>Protein</BodyText>
+                </View>
+              </View>
+            </View>
+            <View style={{ gap: 15 }}>
+              <BodyText
+                style={{ color: colors.error.normal, textAlign: "center" }}
+              >
+                {addError}
+              </BodyText>
+              <StyledButton
+                title="Log Food"
+                onPress={onLogFood}
+                isDisabled={isLogDisabled}
+                isLoading={isLogLoading}
+              />
+            </View>
+          </View>
         </View>
-      )}
-    </MainContainer>
+      </Modal>
+      <Modal
+        transparent
+        animationType="fade"
+        visible={openQuantityModal}
+        onRequestClose={toggleQuantityModal}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            paddingVertical: 50,
+            paddingHorizontal: 15,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: colors.white,
+              width: "100%",
+              borderRadius: 6,
+              padding: 15,
+              gap: 15,
+            }}
+          >
+            <HeaderText>How Much?</HeaderText>
+            <BodyText
+              style={{ color: colors.error.normal, textAlign: "center" }}
+            >
+              {servingError}
+            </BodyText>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <TextInput
+                keyboardType="numeric"
+                value={quantity}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#e3e3e3",
+                  paddingHorizontal: 8,
+                  textAlign: "center",
+                  borderRadius: 6,
+                  flex: 1,
+                }}
+                onChangeText={(text) => setQuantity(text)}
+              />
+              <BodyText style={{ flex: 1 }}>{`Serving(s) of`}</BodyText>
+            </View>
+            <Dropdown
+              style={{ ...styles.dropdown, width: "100%" }}
+              placeholderStyle={{
+                ...styles.placeholderStyle,
+                textAlign: "left",
+              }}
+              selectedTextStyle={{
+                ...styles.selectedTextStyle,
+                textAlign: "left",
+              }}
+              data={getMeasures(modalData?.measures)}
+              maxHeight={500}
+              labelField="label"
+              valueField="weight"
+              placeholder="Select a serving size"
+              value={selectedServing}
+              onChange={(item) => {
+                setSelectedServing(item.weight);
+              }}
+            />
+            <Pressable
+              onPress={() => {
+                toggleQuantityModal();
+              }}
+            >
+              <BodyText
+                style={{ color: colors.primary.normal, textAlign: "right" }}
+              >
+                Ok
+              </BodyText>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+      <MainContainer gap={15} padding={15}>
+        <Searchbar
+          placeholder="Search food"
+          style={{ borderRadius: 6, backgroundColor: "#f2f2f2" }}
+          iconColor={colors.primary.normal}
+          onChangeText={onChangeSearch}
+          value={searchQuery}
+          onIconPress={onSearch}
+          editable={!isDisabled}
+          loading={isDisabled}
+          onEndEditing={onSearch}
+        />
+
+        {searchResults.length > 0 && (
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "flex-end",
+            }}
+          >
+            <Pressable onPress={() => setSearchResults([])}>
+              <BodyText style={{ color: colors.primary.normal }}>
+                Clear
+              </BodyText>
+            </Pressable>
+          </View>
+        )}
+
+        {searchResults.length > 0 && (
+          <FlatList
+            data={searchResults}
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                onPress={() => {
+                  setModalData(item);
+                  setOpenModal(true);
+                }}
+                key={index}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: "#e3e3e3",
+                    padding: 15,
+                    display: "flex",
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 10,
+                    borderRadius: 6,
+                  }}
+                >
+                  <View>
+                    <HeaderText style={{ fontSize: 18 }}>
+                      {item.food.label}
+                    </HeaderText>
+                    <BodyText style={{ color: colors.gray }}>
+                      {item.food.knownAs}
+                    </BodyText>
+                  </View>
+                  <FontAwesome
+                    name="plus"
+                    size={24}
+                    color={colors.primary.dark}
+                  />
+                </View>
+              </TouchableOpacity>
+            )}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+
+        {error && (
+          <View
+            style={{
+              flex: 1,
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: 100,
+            }}
+          >
+            <BodyText style={{ textAlign: "center", fontSize: 18 }}>
+              No results found.
+            </BodyText>
+          </View>
+        )}
+      </MainContainer>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -148,42 +604,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  pickerStyles: {
-    width: "50%",
-    borderWidth: 1,
-    borderColor: "#e3e3e3",
-    borderRadius: 6,
-    backgroundColor: colors.primary.normal,
-  },
   dropdown: {
-    height: 50,
+    height: 30,
     width: "50%",
-    borderColor: "gray",
-    borderWidth: 0.5,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-  },
-  icon: {
-    marginRight: 5,
-  },
-  label: {
-    position: "absolute",
-    backgroundColor: "white",
-    left: 22,
-    top: 8,
-    zIndex: 999,
-    paddingHorizontal: 8,
-    fontSize: 14,
   },
   placeholderStyle: {
-    fontSize: 16,
+    fontSize: 14,
+    color: colors.primary.normal,
+    textAlign: "right",
   },
   selectedTextStyle: {
-    fontSize: 16,
+    fontSize: 14,
+    color: colors.info.dark,
+    textAlign: "right",
   },
-  iconStyle: {
-    width: 20,
-    height: 20,
+  optionContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderColor: "#e3e3e3",
+    paddingBottom: 15,
+  },
+  nutrientsContainer: {
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

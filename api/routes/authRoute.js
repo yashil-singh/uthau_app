@@ -43,7 +43,7 @@ router.post("/login", async (req, res) => {
 
     // Check if user exists
     const registeredUser = await pool.query(
-      `SELECT * FROM users WHERE email = $1`,
+      `SELECT user_id, name, email, image, isVerified, role, gender, weight, height, activity_level, calorie_intake, calorie_burn, weight_goal FROM users WHERE email = $1`,
       [email]
     );
 
@@ -51,10 +51,17 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email. Try again." });
     }
 
+    const passwordRegisteredUser = await pool.query(
+      `SELECT password FROM users WHERE email = $1`,
+      [email]
+    );
+
+    const pass = passwordRegisteredUser.rows[0];
+
     const user = registeredUser.rows[0];
 
     // Check if password is correct
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, pass.password);
 
     if (!isPasswordValid) {
       return res
@@ -62,14 +69,9 @@ router.post("/login", async (req, res) => {
         .json({ message: "Incorrect password. Try again." });
     }
 
-    const user_id = user.user_id;
     const isVerified = user.isverified;
-    const user_email = user.email;
 
-    const token = jwt.sign(
-      { user_id: user_id, isVerified: isVerified, user_email: user_email },
-      process.env.SECRET_KEY
-    );
+    const token = jwt.sign({ user: user }, process.env.SECRET_KEY);
 
     return res.status(201).json({
       message: "Logged in.",
@@ -111,6 +113,8 @@ router.post("/check-user", async (req, res) => {
 
     return res.json({ valid: true });
   } catch (error) {
+    console.log("🚀 ~ error:", error);
+
     return res
       .status(500)
       .json({ message: "Internal server error. Try again later." });
@@ -132,6 +136,18 @@ router.post("/register", async (req, res) => {
       activityLevel,
       weightGoal,
     } = req.body;
+
+    console.log(
+      name,
+      email,
+      password,
+      age,
+      gender,
+      height,
+      weight,
+      activityLevel,
+      weightGoal
+    );
 
     // Hash password
     const salt = await bcrypt.genSalt(10);

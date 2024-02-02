@@ -28,6 +28,7 @@ const login = () => {
     const { email, password, keepLoggedIn } = data;
     try {
       const response = await login({ email, password, keepLoggedIn });
+
       if (response.success) {
         setError(null);
         router.push("/home");
@@ -36,7 +37,6 @@ const login = () => {
       }
     } catch (error) {
       console.log("🚀 ~ file: login.js:37 ~ error:", error);
-
       setError("Unexpected error occured. Try again later.");
     }
   };
@@ -67,6 +67,7 @@ const login = () => {
               <Controller
                 control={control}
                 name="email"
+                disabled={isSubmitting}
                 rules={{
                   required: { value: true, message: ERROR_MESSAGES.REQUIRED },
                 }}
@@ -86,6 +87,7 @@ const login = () => {
               <Controller
                 control={control}
                 name="password"
+                disabled={isSubmitting}
                 rules={{
                   required: { value: true, message: ERROR_MESSAGES.REQUIRED },
                 }}

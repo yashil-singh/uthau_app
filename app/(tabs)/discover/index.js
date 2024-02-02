@@ -19,7 +19,7 @@ const index = () => {
       <OptionsContainer
         title="Exercises"
         color={colors.info.dark}
-        desc="Find your saved exercises here."
+        desc="Search from a collection of exercises here."
       >
         <MaterialCommunityIcons name="weight-lifter" size={35} color="white" />
       </OptionsContainer>
@@ -27,7 +27,7 @@ const index = () => {
       <OptionsContainer
         title="Recipes"
         color={colors.orange.normal}
-        desc="Find your saved recipes here."
+        desc="Search from a collection of recipes here."
       >
         <MaterialIcons name="my-library-books" size={35} color="white" />
       </OptionsContainer>

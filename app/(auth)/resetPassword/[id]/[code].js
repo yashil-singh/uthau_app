@@ -73,6 +73,7 @@ const resetPassword = () => {
       <View style={{ gap: 15 }}>
         <Controller
           control={control}
+          disabled={isSubmitting}
           name="password"
           rules={{
             required: { value: true, message: ERROR_MESSAGES.REQUIRED },
@@ -91,6 +92,7 @@ const resetPassword = () => {
         />
         <Controller
           control={control}
+          disabled={isSubmitting}
           name="confirmPassword"
           rules={{
             required: { value: true, message: ERROR_MESSAGES.REQUIRED },
