@@ -48,8 +48,6 @@ export const AuthContextProvider = ({ children }) => {
     loadUserData();
   }, []); // Empty dependency array to run the effect only once
 
-  console.log("AUTH STATE: ", state);
-
   return (
     <AuthContext.Provider value={{ ...state, dispatch }}>
       {children}

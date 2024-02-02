@@ -1,17 +1,14 @@
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import React, { useEffect, useState } from "react";
-import { Dimensions, Image, Pressable, View } from "react-native";
+import { Dimensions, Image, Pressable, ScrollView, View } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import CircularProgress from "react-native-circular-progress-indicator";
 import { Searchbar } from "react-native-paper";
 import steps from "../../../assets/images/steps.png";
 import MainContainer from "../../../components/MainContainer";
-import Animated, {
-  FadeInDown,
-  FadeInLeft,
-  FadeInUp,
-} from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInLeft } from "react-native-reanimated";
+import { AnimatedCircularProgress } from "react-native-circular-progress";
 import {
   BodyText,
   HeaderText,
@@ -19,10 +16,53 @@ import {
   SubHeaderText,
 } from "../../../components/StyledText";
 import { colors } from "../../../helpers/theme";
-import { useNavigation } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
+import { useAuthContext } from "../../../hooks/useAuthContext";
+import decodeToken from "../../../helpers/decodeToken";
+import AccountContainer from "../../../components/AccountContainer";
+import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useLogout } from "../../../hooks/useLogout";
+import useFoodDiary from "../../../hooks/useFoodDiary";
+import { ScreenStackHeaderSearchBarView } from "react-native-screens";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 const index = () => {
   const navigation = useNavigation();
+  useEffect(() => {
+    navigation.setOptions();
+  }, [navigation]);
+  const router = useRouter();
+  const { user } = useAuthContext();
+  const { logout } = useLogout();
+  const { getLoggedFood } = useFoodDiary();
+
+  const [mealTotals, setMealTotals] = useState(null);
+  let totalCaloriesSum = 0;
+  const currentDate = dayjs();
+
+  // Calculate the sum of total_calories using forEach
+  mealTotals?.forEach((item) => {
+    const numericCalories = parseFloat(item.total_calories);
+    totalCaloriesSum += isNaN(numericCalories) ? 0 : numericCalories;
+  });
+
+  const decodedToken = decodeToken(user);
+  const currentUser = decodedToken?.user;
+
+  useEffect(() => {
+    const getFoods = async () => {
+      const user_id = currentUser?.user_id;
+      const date = currentDate.format("YYYY-MM-DD");
+
+      const response = await getLoggedFood({ user_id, date });
+
+      setMealTotals(response.data.mealTotals);
+    };
+
+    getFoods();
+  }, [currentDate]);
+
   const [date, setDate] = useState(dayjs());
 
   useEffect(() => {
@@ -57,84 +97,73 @@ const index = () => {
   };
 
   return (
-    <Animated.ScrollView
-      showsVerticalScrollIndicator={false}
-      entering={FadeInUp.springify()}
-    >
-      <MainContainer gap={25}>
+    <SafeAreaView>
+      <KeyboardAwareScrollView showsVerticalScrollIndicator={false}>
         <View
           style={{
+            paddingHorizontal: 15,
             flexDirection: "row",
             justifyContent: "space-between",
-            alignItems: "flex-end",
+            alignItems: "center",
           }}
         >
-          <HeaderText
+          <AccountContainer
+            size={40}
+            imageURI={currentUser?.image}
+            onPress={logout}
+          />
+          <Ionicons name="ios-notifications" size={30} color="black" />
+        </View>
+
+        <MainContainer gap={25} padding={15}>
+          <View
             style={{
-              fontSize: 18,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
             }}
           >
-            Hello, Yashil
-          </HeaderText>
-          <View>
             <HeaderText
               style={{
                 fontSize: 18,
-                textAlign: "right",
               }}
             >
-              {date.format("hh:mm A")}
+              Hello, {currentUser?.name.split(" ")[0]}
             </HeaderText>
-            <BodyText style={{ color: colors.gray }}>
-              {date.format("dddd, MMMM D")}
-            </BodyText>
+            <View>
+              <HeaderText
+                style={{
+                  fontSize: 18,
+                  textAlign: "right",
+                }}
+              >
+                {date.format("hh:mm A")}
+              </HeaderText>
+              <BodyText style={{ color: colors.gray }}>
+                {date.format("dddd, MMMM D")}
+              </BodyText>
+            </View>
           </View>
-        </View>
-        {/* Search bar */}
-        <Animated.View entering={FadeInDown.stiffness()}>
-          <Pressable
-            onPress={() => {
-              navigation.navigate("(diary)", { screen: "searchFood" });
-            }}
-          >
-            <Searchbar
-              placeholder="Search food"
-              style={{ borderRadius: 6, backgroundColor: "#f2f2f2" }}
-              iconColor={colors.primary.normal}
-            />
-          </Pressable>
-        </Animated.View>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <HeaderText style={{ fontSize: 18 }}>Membership:</HeaderText>
-          <View
-            style={{
-              backgroundColor: colors.success.light,
-              paddingHorizontal: 15,
-              paddingVertical: 8,
-              borderColor: colors.success.normal,
-              borderWidth: 2,
-            }}
-          >
-            <BodyText>28 Days Left</BodyText>
-          </View>
-        </View>
-        {/* Calories Container */}
-        <Animated.View entering={FadeInDown.delay(200).springify()}>
-          <View
-            style={{
-              padding: 15,
-              borderRadius: 6,
-              padding: 20,
-              borderWidth: 1,
-              borderColor: "#e3e3e3",
-            }}
-          >
+          {/* Search bar */}
+          {/* <Animated.View entering={FadeInDown.stiffness()}>
+            <Pressable
+              onPress={() => {
+                router.canGoBack("/(tabs)/diary/searchFood");
+              }}
+            >
+              <Searchbar
+                placeholder="Search food"
+                style={{ borderRadius: 6, backgroundColor: "#f2f2f2" }}
+                iconColor={colors.primary.normal}
+                onChangeText={(text) => {
+                  if (text.length > 0) {
+                    router.push("/(tabs)/diary/searchFood");
+                  }
+                }}
+              />
+            </Pressable>
+          </Animated.View> */}
+          {currentUser?.role == "member" && (
             <View
               style={{
                 flexDirection: "row",
@@ -142,143 +171,183 @@ const index = () => {
                 justifyContent: "space-between",
               }}
             >
-              <HeaderText style={{ fontSize: 18, marginBottom: 5 }}>
-                Calories
-              </HeaderText>
-              <LinkText href="" style={{ paddingBottom: 10 }}>
-                View Details
-              </LinkText>
+              <HeaderText style={{ fontSize: 18 }}>Membership:</HeaderText>
+              <View
+                style={{
+                  backgroundColor: colors.success.light,
+                  paddingHorizontal: 15,
+                  paddingVertical: 8,
+                  borderColor: colors.success.normal,
+                  borderWidth: 2,
+                }}
+              >
+                <BodyText>28 Days Left</BodyText>
+              </View>
             </View>
+          )}
 
+          {/* Calories Container */}
+          <Animated.View entering={FadeInDown.delay(200).springify()}>
             <View
               style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
+                padding: 15,
+                borderRadius: 6,
+                padding: 20,
+                borderWidth: 1,
+                borderColor: "#e3e3e3",
               }}
             >
-              <View>
-                <CircularProgress
-                  value={1440}
-                  maxValue={2550}
-                  radius={78}
-                  activeStrokeColor={colors.primary.normal}
-                  inActiveStrokeColor={colors.primary.dark}
-                  inActiveStrokeOpacity={0.2}
-                  inActiveStrokeWidth={15}
-                  activeStrokeWidth={20}
-                  title="Remaining"
-                  titleColor={colors.black}
-                  titleStyle={{
-                    color: "gray",
-                    fontSize: 14,
-                    fontFamily: "Figtree",
-                  }}
-                  progressValueStyle={{
-                    color: colors.black,
-                    fontSize: 28,
-                    fontFamily: "Poppins-Bold",
-                  }}
-                />
-              </View>
               <View
-                style={{ alignItems: "flex-end", justifyContent: "flex-end" }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
               >
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
-                >
-                  <Feather name="target" size={25} color="red" />
-                  <SubHeaderText style={{ fontSize: 18 }}>
-                    Daily Goal:
-                  </SubHeaderText>
+                <HeaderText style={{ fontSize: 18, marginBottom: 5 }}>
+                  Calories
+                </HeaderText>
+                <LinkText href="" style={{ paddingBottom: 10 }}>
+                  View Details
+                </LinkText>
+              </View>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                }}
+              >
+                <View>
+                  <CircularProgress
+                    value={totalCaloriesSum}
+                    maxValue={currentUser?.calorie_intake}
+                    radius={78}
+                    activeStrokeColor={colors.primary.normal}
+                    inActiveStrokeColor={colors.primary.dark}
+                    inActiveStrokeOpacity={0.2}
+                    inActiveStrokeWidth={12}
+                    activeStrokeWidth={17}
+                    title="Completed"
+                    titleColor={colors.black}
+                    titleStyle={{
+                      color: "gray",
+                      fontSize: 14,
+                      fontFamily: "Figtree",
+                    }}
+                    progressValueStyle={{
+                      color: colors.black,
+                      fontSize: 28,
+                      fontFamily: "Poppins-Bold",
+                    }}
+                  />
                 </View>
-                <HeaderText style={{ fontSize: 32 }}>2550</HeaderText>
+                <View
+                  style={{ alignItems: "flex-end", justifyContent: "flex-end" }}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 5,
+                    }}
+                  >
+                    <Feather name="target" size={25} color="red" />
+                    <SubHeaderText style={{ fontSize: 18 }}>
+                      Daily Goal:
+                    </SubHeaderText>
+                  </View>
+                  <HeaderText style={{ fontSize: 32 }}>
+                    {currentUser?.calorie_intake.toLocaleString()}
+                  </HeaderText>
+                </View>
               </View>
             </View>
-          </View>
-        </Animated.View>
-        {/* Steps and Calories card */}
+          </Animated.View>
+          {/* Steps and Calories card */}
 
-        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Animated.View
+              entering={FadeInLeft.delay(200).springify()}
+              style={{
+                backgroundColor: colors.secondary.normal,
+                flex: 1,
+                borderRadius: 10,
+                padding: 15,
+              }}
+            >
+              <View style={{ alignItems: "flex-end" }}>
+                <Image source={steps} width={60} height={60} />
+              </View>
+              <View>
+                <SubHeaderText style={{ color: colors.white, fontSize: 18 }}>
+                  Steps
+                </SubHeaderText>
+                <HeaderText style={{ color: colors.white, fontSize: 32 }}>
+                  1,857
+                </HeaderText>
+              </View>
+            </Animated.View>
+            <Animated.View
+              entering={FadeInLeft.delay(200).springify()}
+              style={{
+                backgroundColor: colors.warning.normal,
+                flex: 1,
+                borderRadius: 10,
+                padding: 15,
+              }}
+            >
+              <View style={{ alignItems: "flex-end" }}>
+                <FontAwesome5 name="fire-alt" size={60} color={colors.white} />
+              </View>
+              <View>
+                <SubHeaderText style={{ color: colors.white, fontSize: 18 }}>
+                  Calories
+                </SubHeaderText>
+                <HeaderText style={{ color: colors.white, fontSize: 32 }}>
+                  530
+                </HeaderText>
+              </View>
+            </Animated.View>
+          </View>
+          {/* Progress */}
+
           <Animated.View
-            entering={FadeInLeft.delay(200).springify()}
+            entering={FadeInDown.delay(200).springify()}
             style={{
-              backgroundColor: colors.secondary.normal,
-              flex: 1,
-              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: "#e3e3e3",
               padding: 15,
+              borderRadius: 10,
+              gap: 15,
             }}
           >
-            <View style={{ alignItems: "flex-end" }}>
-              <Image source={steps} width={60} height={60} />
+            <HeaderText style={{ fontSize: 18 }}>Progress</HeaderText>
+            <View
+              style={{ flexDirection: "row", justifyContent: "space-between" }}
+            >
+              <SubHeaderText>Weight</SubHeaderText>
+              <BodyText style={{ color: colors.gray }}>Last 90 Days</BodyText>
             </View>
-            <View>
-              <SubHeaderText style={{ color: colors.white, fontSize: 18 }}>
-                Steps
-              </SubHeaderText>
-              <HeaderText style={{ color: colors.white, fontSize: 32 }}>
-                1,857
-              </HeaderText>
+            <View
+              style={{
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: 15,
+              }}
+            >
+              <LineChart
+                data={data}
+                width={(screenWidth * 3) / 4}
+                height={256}
+                chartConfig={chartConfig}
+                bezier
+              />
             </View>
           </Animated.View>
-          <Animated.View
-            entering={FadeInLeft.delay(200).springify()}
-            style={{
-              backgroundColor: colors.warning.normal,
-              flex: 1,
-              borderRadius: 10,
-              padding: 15,
-            }}
-          >
-            <View style={{ alignItems: "flex-end" }}>
-              <FontAwesome5 name="fire-alt" size={60} color={colors.white} />
-            </View>
-            <View>
-              <SubHeaderText style={{ color: colors.white, fontSize: 18 }}>
-                Calories
-              </SubHeaderText>
-              <HeaderText style={{ color: colors.white, fontSize: 32 }}>
-                530
-              </HeaderText>
-            </View>
-          </Animated.View>
-        </View>
-        {/* Progress */}
-
-        <Animated.View
-          entering={FadeInDown.delay(200).springify()}
-          style={{
-            borderWidth: 1,
-            borderColor: "#e3e3e3",
-            padding: 15,
-            borderRadius: 10,
-            gap: 15,
-          }}
-        >
-          <HeaderText style={{ fontSize: 18 }}>Progress</HeaderText>
-          <View
-            style={{ flexDirection: "row", justifyContent: "space-between" }}
-          >
-            <SubHeaderText>Weight</SubHeaderText>
-            <BodyText style={{ color: colors.gray }}>Last 90 Days</BodyText>
-          </View>
-          <View
-            style={{
-              alignItems: "center",
-              justifyContent: "center",
-              marginTop: 15,
-            }}
-          >
-            <LineChart
-              data={data}
-              width={(screenWidth * 3) / 4}
-              height={256}
-              chartConfig={chartConfig}
-              bezier
-            />
-          </View>
-        </Animated.View>
-      </MainContainer>
-    </Animated.ScrollView>
+        </MainContainer>
+      </KeyboardAwareScrollView>
+    </SafeAreaView>
   );
 };
 

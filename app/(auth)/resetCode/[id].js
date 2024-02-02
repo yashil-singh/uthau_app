@@ -83,6 +83,7 @@ const resetCode = () => {
         <View>
           <Controller
             control={control}
+            disabled={isSubmitting}
             name="resetCode"
             rules={{
               required: { value: true, message: ERROR_MESSAGES.REQUIRED },

@@ -23,13 +23,19 @@ export default function Layout() {
       <Stack.Screen
         name="foodLog"
         options={{
-          headerTitle: "Food Log",
+          headerTitle: "Food Diary",
         }}
       />
       <Stack.Screen
         name="searchFood"
         options={{
           headerTitle: "Food Log",
+        }}
+      />
+      <Stack.Screen
+        name="foodDetail"
+        options={{
+          headerTitle: "Add Food",
         }}
       />
       <Stack.Screen
