@@ -28,6 +28,7 @@ const index = () => {
         title="Exercises"
         color={colors.info.dark}
         desc="Find your saved exercises here."
+        onPress={() => router.push("diary/exercises")}
       >
         <MaterialCommunityIcons name="weight-lifter" size={30} color="white" />
       </OptionsContainer>

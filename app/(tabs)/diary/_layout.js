@@ -44,6 +44,12 @@ export default function Layout() {
           headerTitle: "Nutrition",
         }}
       />
+      <Stack.Screen
+        name="exercises"
+        options={{
+          headerTitle: "Exercises",
+        }}
+      />
     </Stack>
   );
 }

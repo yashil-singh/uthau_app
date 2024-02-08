@@ -5,6 +5,8 @@ const colors = {
 
   lightWhite: "#FAFAFC",
 
+  lightGray: "#E3E3E3",
+
   links: "#007fff",
 
   background: "#F2f2F2",

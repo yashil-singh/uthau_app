@@ -3,9 +3,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -17,27 +15,30 @@ import { colors } from "../../../helpers/theme";
 import {
   BodyText,
   HeaderText,
-  LinkText,
   SubHeaderText,
 } from "../../../components/StyledText";
-import useFoodDiary from "../../../hooks/useFoodDiary";
 import { FontAwesome } from "@expo/vector-icons";
 import { Dropdown } from "react-native-element-dropdown";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import StyledButton from "../../../components/StyledButton";
+import useFood from "../../../hooks/useFood";
 
 const searchFood = () => {
-  const router = useRouter();
+  // Import hooks related to food
+  const { searchFood, logFood } = useFood();
 
-  const { searchFood, logFood } = useFoodDiary();
-
+  // Get parameter values
   const { id, date } = useLocalSearchParams();
 
   // User's search query
   const [searchQuery, setSearchQuery] = useState("");
   const onChangeSearch = (query) => setSearchQuery(query);
 
+  // To store the search results
+  const [searchResults, setSearchResults] = useState([]);
+
+  // States related to messages to display
   const [error, setError] = useState(null);
   const [addError, setAddError] = useState(null);
   const [servingError, setServingError] = useState(null);
@@ -60,6 +61,7 @@ const searchFood = () => {
   const [fat, setFat] = useState(0);
   const [carbs, setCarbs] = useState(0);
 
+  // When toggling the modal open/close
   const toggleModal = () => {
     setOpenModal(!openModal);
     setModalData(null);
@@ -74,6 +76,7 @@ const searchFood = () => {
     setProtein(0);
   };
 
+  // When toggling the quantity modal open/close
   const toggleQuantityModal = () => {
     setServingError(null);
     if (quantity <= 0) {
@@ -119,6 +122,7 @@ const searchFood = () => {
     return filteredMeasures;
   };
 
+  // To convert the nutrirtional values to the selected serving size and quantity
   const convertMetric = ({ convertingMetric }) => {
     if (!quantity || !selectedServing) {
       return 0;
@@ -136,6 +140,7 @@ const searchFood = () => {
     }
   };
 
+  // Use effect to change the nutritional values when the serving size or quantity is changed
   useEffect(() => {
     // Calculate nutrient values based on the converted metric
     const calculatedCalories = convertMetric({
@@ -156,8 +161,6 @@ const searchFood = () => {
     setFat(calculatedFat.toFixed(1));
     setCarbs(calculatedCarbs.toFixed(1));
   }, [selectedServing, quantity]);
-
-  const [searchResults, setSearchResults] = useState([]);
 
   // Get search results for user's query
   const onSearch = async () => {
@@ -197,7 +200,7 @@ const searchFood = () => {
     }
   };
 
-  // Log the food
+  // To log the food
   const onLogFood = async () => {
     setIsLogDisabled(true);
     setIsLogLoading(true);
@@ -225,8 +228,6 @@ const searchFood = () => {
         return;
       }
 
-      console.log(id);
-
       const response = await logFood({
         user_id: id,
         date,
@@ -239,8 +240,6 @@ const searchFood = () => {
         quantity,
         selectedMeal,
       });
-
-      console.log(response.data);
 
       if (response.success) {
         setAddError(null);
@@ -261,6 +260,9 @@ const searchFood = () => {
     setCarbs(0);
     setFat(0);
     setProtein(0);
+    setQuantity(1);
+    setSelectedMeal(null);
+    setSelectedServing(null);
     setOpenModal(false);
   };
 
@@ -506,17 +508,21 @@ const searchFood = () => {
         </View>
       </Modal>
       <MainContainer gap={15} padding={15}>
-        <Searchbar
-          placeholder="Search food"
-          style={{ borderRadius: 6, backgroundColor: "#f2f2f2" }}
-          iconColor={colors.primary.normal}
-          onChangeText={onChangeSearch}
-          value={searchQuery}
-          onIconPress={onSearch}
-          editable={!isDisabled}
-          loading={isDisabled}
-          onEndEditing={onSearch}
-        />
+        <View>
+          <SubHeaderText>What are you looking for?</SubHeaderText>
+          <Searchbar
+            placeholder="Search food"
+            style={{ borderRadius: 6, backgroundColor: "#f2f2f2" }}
+            inputStyle={{ fontSize: 14 }}
+            iconColor={colors.primary.normal}
+            onChangeText={onChangeSearch}
+            value={searchQuery}
+            onIconPress={onSearch}
+            editable={!isDisabled}
+            loading={isDisabled}
+            onEndEditing={onSearch}
+          />
+        </View>
 
         {searchResults.length > 0 && (
           <View
@@ -557,10 +563,15 @@ const searchFood = () => {
                     alignItems: "center",
                     marginBottom: 10,
                     borderRadius: 6,
+                    gap: 5,
                   }}
                 >
                   <View>
-                    <HeaderText style={{ fontSize: 18 }}>
+                    <HeaderText
+                      ellipsis="tail"
+                      numOfLines={1}
+                      style={{ fontSize: 18 }}
+                    >
                       {item.food.label}
                     </HeaderText>
                     <BodyText style={{ color: colors.gray }}>

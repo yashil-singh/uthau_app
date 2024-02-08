@@ -1,5 +1,5 @@
 import { View, ScrollView, TouchableOpacity } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
 import { Feather } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -8,63 +8,75 @@ import { colors } from "../../../helpers/theme";
 import CircularProgress from "react-native-circular-progress-indicator";
 import MealTable from "../../../components/MealTable";
 import StyledButton from "../../../components/StyledButton";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useAuthContext } from "../../../hooks/useAuthContext";
 import decodeToken from "../../../helpers/decodeToken";
 import { AntDesign } from "react-native-vector-icons";
 import dayjs from "dayjs";
-import useFoodDiary from "../../../hooks/useFoodDiary";
+import useFood from "../../../hooks/useFood";
+import { TouchableRipple } from "react-native-paper";
 
 const foodLog = () => {
   const router = useRouter();
 
   const { user } = useAuthContext();
 
-  const { getLoggedFood } = useFoodDiary();
+  // Import hooks related to food
+  const { getLoggedFood } = useFood();
 
+  // States related to date
   const [currentDate, setCurrentDate] = useState(dayjs());
-
   const [selectedDate, setSelectedDate] = useState(
     dayjs().format("YYYY-MM-DD")
   );
 
+  // To store the logged foods of the user for the selected date
   const [loggedFoods, setLoggedFoods] = useState(null);
+
+  // To store the total calories of logged food of the user for the selected date
   const [mealTotals, setMealTotals] = useState(null);
 
+  // Functions to change the selected date
   const handlePrevDay = () => {
     setCurrentDate(currentDate.subtract(1, "day"));
   };
-
   const handleNextDay = () => {
     setCurrentDate(currentDate.add(1, "day"));
   };
 
+  // To check if current date is today
   const isToday = currentDate.isSame(dayjs(), "day");
   const formattedDate = isToday
     ? "Today"
     : currentDate.format("ddd MMM DD, YYYY");
 
+  // Decoded and get data related to the user
   const decodedToken = decodeToken(user);
   const currentUser = decodedToken?.user;
-
   const user_id = currentUser?.user_id;
 
+  // To check is the current date is in the future
   const isTomorrow = currentDate < dayjs();
 
-  useEffect(() => {
-    const getFoods = async () => {
-      setSelectedDate(currentDate.format("YYYY-MM-DD"));
-      const date = currentDate.format("YYYY-MM-DD");
+  // To get logged foods of the user of the selected date
+  const getFoods = async () => {
+    setSelectedDate(currentDate.format("YYYY-MM-DD"));
+    const date = currentDate.format("YYYY-MM-DD");
 
-      const response = await getLoggedFood({ user_id, date });
+    const response = await getLoggedFood({ user_id, date });
 
-      setLoggedFoods(response.data.result);
-      setMealTotals(response.data.mealTotals);
-    };
+    setLoggedFoods(response.data.result);
+    setMealTotals(response.data.mealTotals);
+  };
 
-    getFoods();
-  }, [currentDate]);
+  // To run the function to get logged foods when selected date changes
+  useFocusEffect(
+    useCallback(() => {
+      getFoods();
+    }, [currentDate])
+  );
 
+  // To store the total calories
   let totalCaloriesSum = 0;
 
   // Calculate the sum of total_calories using forEach
@@ -92,17 +104,25 @@ const foodLog = () => {
               alignItems: "center",
             }}
           >
-            <TouchableOpacity onPress={handlePrevDay} activeOpacity={0.8}>
+            <TouchableRipple
+              onPress={handlePrevDay}
+              style={{ borderRadius: 100, padding: 2 }}
+              borderless
+            >
               <AntDesign name="left" size={18} color="black" />
-            </TouchableOpacity>
+            </TouchableRipple>
 
             <SubHeaderText style={{ fontSize: 18 }}>
               {formattedDate}
             </SubHeaderText>
 
-            <TouchableOpacity onPress={handleNextDay} activeOpacity={0.8}>
+            <TouchableRipple
+              onPress={handleNextDay}
+              style={{ borderRadius: 100, padding: 2 }}
+              borderless
+            >
               <AntDesign name="right" size={18} color="black" />
-            </TouchableOpacity>
+            </TouchableRipple>
           </View>
 
           <SubHeaderText style={{ fontSize: 20, textAlign: "center" }}>
