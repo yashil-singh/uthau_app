@@ -36,6 +36,7 @@ const index = () => {
         title="Recipes"
         color={colors.orange.normal}
         desc="Find your saved recipes here."
+        onPress={() => router.push("diary/recipes")}
       >
         <MaterialIcons name="my-library-books" size={30} color="white" />
       </OptionsContainer>

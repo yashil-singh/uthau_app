@@ -17,6 +17,7 @@ import { TouchableRipple } from "react-native-paper";
 const CardOption = ({
   title,
   target,
+  desc,
   gifUrl,
   onPress,
   isSaved,
@@ -68,7 +69,7 @@ const CardOption = ({
             <View>
               <HeaderText style={{ fontSize: 14 }}>{formattedTitle}</HeaderText>
               <BodyText style={{ color: colors.gray }}>
-                Targeted muscle(s): {formattedTarget}
+                {desc} {formattedTarget}
               </BodyText>
             </View>
           </View>

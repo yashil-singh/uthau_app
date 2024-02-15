@@ -7,6 +7,7 @@ import {
   Pressable,
   Modal,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
@@ -33,6 +34,7 @@ import decodeToken from "../../../helpers/decodeToken";
 import { FontAwesome } from "@expo/vector-icons";
 import { TouchableRipple } from "react-native-paper";
 import { useFocusEffect } from "expo-router";
+import ErrorModal from "../../../components/ErrorModal";
 
 const exercises = () => {
   const { user } = useAuthContext();
@@ -53,16 +55,24 @@ const exercises = () => {
   const [searchIsLoading, setSearchIsLoading] = useState(false);
   const [searchIsDisabled, setSearchIsDisabled] = useState(false);
 
+  // Store the results
+  const [searchResults, setSearchResults] = useState([]);
+
   const [isLoading, setIsLoading] = useState(false);
 
   // Modal related states
   const [openModal, setOpenModal] = useState(false);
   const [modalData, setModalData] = useState(null);
+  const [openErrorModal, setOpenErrorModal] = useState(false);
+
   const toggleModal = () => {
     setOpenModal(!openModal);
-    setSaveError(null);
+    setModalData(null);
   };
+
   const [saveError, setSaveError] = useState(null);
+  const [message, setMessage] = useState(null);
+  const [resultMessage, setResultMessage] = useState(null);
 
   // Saved exercises
   const [savedExercises, setSavedExercises] = useState([]);
@@ -95,9 +105,14 @@ const exercises = () => {
 
     if (response.success) {
       const data = response?.data;
+      if (data.length == 0) {
+        setResultMessage("No results found.");
+      }
+
       setSearchResults(data);
     } else {
-      setSearchError(response.error);
+      setOpenErrorModal(true);
+      setSaveError(response.error);
       setSearchResults([]);
     }
 
@@ -137,6 +152,7 @@ const exercises = () => {
     user_id,
   }) => {
     setSaveError(null);
+    setMessage(null);
     try {
       const response = await saveExercise({
         exercise_id,
@@ -152,6 +168,10 @@ const exercises = () => {
 
       if (!response.success) {
         setSaveError(response.message);
+        setMessage("Error saving exercise to diary.");
+        setOpenErrorModal(true);
+      } else {
+        setMessage("Exercise saved to diary.");
       }
     } catch (error) {
       setSaveError("Unexpected error occured. Try again later.");
@@ -161,8 +181,15 @@ const exercises = () => {
   // To remove from saved
   const onRemove = async ({ user_id, exercise_id }) => {
     try {
-      await removeSavedExercise({ user_id, exercise_id });
-      setSaveError("Exercise revmounted successfully.");
+      const response = await removeSavedExercise({ user_id, exercise_id });
+
+      if (response.success) {
+        setMessage("Exercise removed form diary.");
+      } else {
+        setSaveError(response.message);
+        setOpenErrorModal(true);
+        setMessage("Error removing exercise from diary.");
+      }
     } catch (error) {
       console.log("🚀 ~ error:", error);
       setSaveError("Unexpected error occured. Try again later.");
@@ -184,12 +211,12 @@ const exercises = () => {
   useFocusEffect(
     useCallback(() => {
       fetchSavedExercises();
-    }, [searchResults, modalData, saveError])
+    }, [searchResults, message])
   );
 
   // Check if the exercise is saved or not
   const checkSaved = (exercise_id) => {
-    const check = savedExercises.find(
+    const check = savedExercises?.find(
       (exercise) => exercise.exercise_id == exercise_id
     );
     if (check) {
@@ -199,48 +226,23 @@ const exercises = () => {
     return false;
   };
 
-  // Store the results
-  const [searchResults, setSearchResults] = useState([
-    {
-      bodyPart: "back",
-      equipment: "body weight",
-      gifUrl: "https://v2.exercisedb.io/image/yeTvGyEDjdVemF",
-      id: "3293",
-      instructions: [
-        "Start by hanging from a pull-up bar with an overhand grip, slightly wider than shoulder-width apart.",
-        "Engage your core and pull your shoulder blades down and back.",
-        "As you pull yourself up, bend one arm and bring your elbow towards your side, while keeping the other arm straight.",
-        "Continue pulling until your chin is above the bar and your bent arm is fully flexed.",
-        "Lower yourself back down with control, straightening the bent arm and repeating the movement on the other side.",
-        "Alternate sides with each repetition.",
-      ],
-      name: "archer pull up",
-      secondaryMuscles: ["biceps", "forearms"],
-      target: "lats",
-    },
-    {
-      bodyPart: "back",
-      equipment: "leverage machine",
-      gifUrl: "https://v2.exercisedb.io/image/-4en8gCYbCHOFu",
-      id: "0015",
-      instructions: [
-        "Adjust the machine to your desired weight and height.",
-        "Place your hands on the parallel bars with a close grip, palms facing each other.",
-        "Hang from the bars with your arms fully extended and your feet off the ground.",
-        "Engage your back muscles and pull your body up towards the bars, keeping your elbows close to your body.",
-        "Continue pulling until your chin is above the bars.",
-        "Pause for a moment at the top, then slowly lower your body back down to the starting position.",
-        "Repeat for the desired number of repetitions.",
-      ],
-      name: "assisted parallel close grip pull-up",
-      secondaryMuscles: ["biceps", "forearms"],
-      target: "lats",
-    },
-  ]);
-
   return (
     <KeyboardAvoidingView style={{ flex: 1 }}>
-      <Modal transparent animationType="fade" visible={openModal}>
+      <ErrorModal
+        openErrorModal={openErrorModal}
+        title={"Error"}
+        message={saveError}
+        onClose={() => {
+          setOpenErrorModal(false);
+          setSaveError(null);
+        }}
+      />
+      <Modal
+        transparent
+        animationType="slide"
+        visible={openModal}
+        onRequestClose={() => toggleModal()}
+      >
         <View
           style={{
             flex: 1,
@@ -261,7 +263,7 @@ const exercises = () => {
               name="arrow-left"
               size={24}
               color="black"
-              onPress={toggleModal}
+              onPress={() => toggleModal}
             />
             <HeaderText style={{ fontSize: 24 }}>Details</HeaderText>
           </View>
@@ -404,6 +406,7 @@ const exercises = () => {
             onIconPress={onSearch}
             loading={searchIsLoading}
             editable={!searchIsDisabled}
+            onClearIconPress={() => setResultMessage(null)}
           />
           {searchError && (
             <BodyText style={styles.errorMessage}>{searchError}</BodyText>
@@ -435,6 +438,7 @@ const exercises = () => {
                   data={searchResults}
                   renderItem={({ item, index }) => (
                     <CardOption
+                      desc={"Targeted muscle(s):"}
                       isSaved={checkSaved(item.id)}
                       title={item.name}
                       target={item.target}
@@ -470,83 +474,103 @@ const exercises = () => {
                 />
               </>
             ) : (
-              <View style={{ gap: 10 }}>
-                <OptionsContainer
-                  title="Arms"
-                  color={colors.orange.normal}
-                  desc="Find exercises that best target your arm muscles."
-                  onPress={() => onGetBodyPart("upper arms")}
-                >
-                  <Image
-                    source={arms}
-                    style={{
-                      width: 35,
-                      height: 35,
-                      resizeMode: "cover",
-                    }}
-                  />
-                </OptionsContainer>
-                <OptionsContainer
-                  title="Chest"
-                  color={colors.secondary.normal}
-                  desc="Find exercises that best target your chest muscles."
-                  onPress={() => onGetBodyPart("chest")}
-                >
-                  <Image
-                    source={chest}
-                    style={{
-                      width: 50,
-                      height: 35,
-                      resizeMode: "cover",
-                    }}
-                  />
-                </OptionsContainer>
-                <OptionsContainer
-                  title="Back"
-                  color={colors.warning.normal}
-                  desc="Find exercises that best target your back muscles."
-                  onPress={() => onGetBodyPart("back")}
-                >
-                  <Image
-                    source={back}
-                    style={{
-                      width: 50,
-                      height: 35,
-                      resizeMode: "cover",
-                    }}
-                  />
-                </OptionsContainer>
-                <OptionsContainer
-                  title="Leg"
-                  color={colors.info.normal}
-                  desc="Find exercises that best target your leg muscles."
-                  onPress={() => onGetBodyPart("upper legs")}
-                >
-                  <Image
-                    source={leg}
-                    style={{
-                      width: 45,
-                      height: 35,
-                      resizeMode: "cover",
-                    }}
-                  />
-                </OptionsContainer>
-                <OptionsContainer
-                  title="Cardio and Abs"
-                  color={colors.error.normal}
-                  desc="Find exercises that best trains your cardio and abs."
-                  onPress={() => onGetBodyPart("cardio")}
-                >
-                  <Image
-                    source={cardio}
-                    style={{
-                      width: 35,
-                      height: 35,
-                      resizeMode: "cover",
-                    }}
-                  />
-                </OptionsContainer>
-              </View>
+              <>
+                {resultMessage != null ? (
+                  <>
+                    <View
+                      style={{
+                        flex: 1,
+                        display: "flex",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <SubHeaderText
+                        style={{ fontSize: 18, textAlign: "center" }}
+                      >
+                        No results found.
+                      </SubHeaderText>
+                    </View>
+                  </>
+                ) : (
+                  <View style={{ gap: 10 }}>
+                    <OptionsContainer
+                      title="Arms"
+                      color={colors.orange.normal}
+                      desc="Find exercises that best target your arm muscles."
+                      onPress={() => onGetBodyPart("upper arms")}
+                    >
+                      <Image
+                        source={arms}
+                        style={{
+                          width: 35,
+                          height: 35,
+                          resizeMode: "cover",
+                        }}
+                      />
+                    </OptionsContainer>
+                    <OptionsContainer
+                      title="Chest"
+                      color={colors.secondary.normal}
+                      desc="Find exercises that best target your chest muscles."
+                      onPress={() => onGetBodyPart("chest")}
+                    >
+                      <Image
+                        source={chest}
+                        style={{
+                          width: 50,
+                          height: 35,
+                          resizeMode: "cover",
+                        }}
+                      />
+                    </OptionsContainer>
+                    <OptionsContainer
+                      title="Back"
+                      color={colors.warning.normal}
+                      desc="Find exercises that best target your back muscles."
+                      onPress={() => onGetBodyPart("back")}
+                    >
+                      <Image
+                        source={back}
+                        style={{
+                          width: 50,
+                          height: 35,
+                          resizeMode: "cover",
+                        }}
+                      />
+                    </OptionsContainer>
+                    <OptionsContainer
+                      title="Leg"
+                      color={colors.info.normal}
+                      desc="Find exercises that best target your leg muscles."
+                      onPress={() => onGetBodyPart("upper legs")}
+                    >
+                      <Image
+                        source={leg}
+                        style={{
+                          width: 45,
+                          height: 35,
+                          resizeMode: "cover",
+                        }}
+                      />
+                    </OptionsContainer>
+                    <OptionsContainer
+                      title="Cardio and Abs"
+                      color={colors.error.normal}
+                      desc="Find exercises that best trains your cardio and abs."
+                      onPress={() => onGetBodyPart("cardio")}
+                    >
+                      <Image
+                        source={cardio}
+                        style={{
+                          width: 35,
+                          height: 35,
+                          resizeMode: "cover",
+                        }}
+                      />
+                    </OptionsContainer>
+                  </View>
+                )}
+              </>
             )}
           </>
         )}

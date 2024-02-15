@@ -14,7 +14,7 @@ import {
   SubHeaderText,
 } from "../../../components/StyledText";
 import { colors } from "../../../helpers/theme";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useAuthContext } from "../../../hooks/useAuthContext";
 import decodeToken from "../../../helpers/decodeToken";
 import AccountContainer from "../../../components/AccountContainer";
@@ -25,7 +25,6 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import useFood from "../../../hooks/useFood";
 
 const index = () => {
-  const router = useRouter();
   const { user } = useAuthContext();
   const { logout } = useLogout();
   const { getLoggedFood } = useFood();

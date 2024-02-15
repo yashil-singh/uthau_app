@@ -368,9 +368,15 @@ const searchFood = () => {
               </View>
               <View
                 style={{
-                  ...styles.optionContainer,
+                  borderWidth: 1,
+                  borderColor: colors.background,
+                  paddingHorizontal: 15,
+                  paddingVertical: 25,
+                  flexDirection: "row",
+                  alignItems: "center",
                   justifyContent: "space-evenly",
                   gap: 25,
+                  borderRadius: 6,
                 }}
               >
                 <View style={styles.nutrientsContainer}>

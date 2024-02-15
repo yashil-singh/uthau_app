@@ -14,7 +14,6 @@ const useRegister = () => {
     weightGoal,
   }) => {
     try {
-      console.log("REACHES HERE");
       const response = await axios.post(`${apiURL}/auth/register`, {
         name,
         email,
@@ -26,8 +25,6 @@ const useRegister = () => {
         activityLevel,
         weightGoal,
       });
-
-      console.log(response);
 
       const data = response?.data;
 

@@ -41,6 +41,7 @@ const index = () => {
         title="Find Partner"
         color={colors.secondary.normal}
         desc="Search for gym partners to get gains together."
+        onPress={() => router.push("discover/partner")}
       >
         <MaterialIcons name="person-search" size={35} color="white" />
       </OptionsContainer>

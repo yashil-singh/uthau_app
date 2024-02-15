@@ -106,6 +106,10 @@ const useExercise = () => {
         user_id,
         exercise_id,
       });
+      return {
+        success: true,
+        message: response?.data.message,
+      };
     } catch (error) {
       console.log("🚀 ~ error:", error);
       return {
@@ -119,10 +123,7 @@ const useExercise = () => {
   const getSavedExercises = async (user_id) => {
     try {
       if (!user_id) {
-        return {
-          success: false,
-          message: "Invalid request.",
-        };
+        return;
       }
       const response = await axios.get(
         `${apiURL}/diary/exercise/get-saved/${user_id}`
@@ -133,6 +134,8 @@ const useExercise = () => {
       return {
         success: true,
         data: data.data,
+        status: response?.status,
+        message: response?.data.message,
       };
     } catch (error) {
       return {

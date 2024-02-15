@@ -240,10 +240,19 @@ router.get(
     const { user_id } = req.params;
 
     try {
+      if (!user_id) {
+        return res.status(400).json({ message: "Invalid request." });
+      }
       const result = await pool.query(
         `SELECT * FROM saved_exercises WHERE user_id = $1`,
         [user_id]
       );
+
+      if (result.rowCount <= 0) {
+        return res.status(202).json({
+          message: "No saved exercises found in your diary.",
+        });
+      }
 
       return res.status(200).json({ data: result.rows });
     } catch (error) {
@@ -259,7 +268,6 @@ router.get(
 router.post("/exercise/remove", strictVerifyToken, async (req, res) => {
   try {
     const { user_id, exercise_id } = req.body;
-    console.log("🚀 ~ req.body:", req.body);
 
     if (!user_id || !exercise_id) {
       return res.status(400).json({ message: "Invalid request." });
@@ -270,11 +278,11 @@ router.post("/exercise/remove", strictVerifyToken, async (req, res) => {
       [user_id, exercise_id]
     );
 
-    if (check.rowCount < 0) {
+    if (check.rowCount <= 0) {
       return res.status(404).json({ message: "Exercise not found in diary." });
     }
 
-    const result = await pool.query(
+    await pool.query(
       "DELETE FROM saved_exercises WHERE user_id = $1 AND exercise_id = $2",
       [user_id, exercise_id]
     );
@@ -284,6 +292,136 @@ router.post("/exercise/remove", strictVerifyToken, async (req, res) => {
       .json({ message: "Exercise removed from diary successfully." });
   } catch (error) {
     console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+// To return list of saved recipes
+router.get(
+  "/recipe/get-saved/:user_id",
+  strictVerifyToken,
+  async (req, res) => {
+    try {
+      const { user_id } = req.params;
+      if (!user_id || user_id == undefined) {
+        return res.status(400).json({ message: "Invalid request." });
+      }
+      const result = await pool.query(
+        `SELECT * FROM saved_recipes WHERE user_id = $1`,
+        [user_id]
+      );
+
+      if (result.rowCount <= 0) {
+        return res.status(202).json({
+          message: "No saved recipes found in your diary.",
+        });
+      }
+
+      return res.status(200).json({ data: result.rows });
+    } catch (error) {
+      console.log("🚀 ~ getSavedRecipes error:", error);
+      return res
+        .status(500)
+        .json({ message: "Internal server error. Try again later." });
+    }
+  }
+);
+
+// To save recipe to diary
+router.post("/recipe/save", strictVerifyToken, async (req, res) => {
+  try {
+    const {
+      user_id,
+      recipe_id,
+      recipe_name,
+      ingredients,
+      servings,
+      cooking_time,
+      tags,
+      calories,
+      carbs,
+      protein,
+      fat,
+      instruction_link,
+      img_url,
+    } = req.body;
+
+    if (!user_id || !recipe_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const check = await pool.query(
+      `SELECT * FROM saved_recipes WHERE user_id = $1 AND recipe_id = $2`,
+      [user_id, recipe_id]
+    );
+
+    if (check.rowCount > 0) {
+      return res.status(400).json({ message: "Recipe is already saved." });
+    }
+
+    const tag_labels = tags.map((item) => item.label);
+
+    await pool.query(
+      `INSERT INTO saved_recipes 
+      (user_id, recipe_id, recipe_name, ingredients, servings, cook_time, tags, calories, carbs, protein, fat, instruction_link, img_url) 
+      VALUES 
+      ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [
+        user_id,
+        recipe_id,
+        recipe_name,
+        ingredients,
+        servings,
+        cooking_time,
+        tag_labels,
+        calories,
+        carbs,
+        protein,
+        fat,
+        instruction_link,
+        img_url,
+      ]
+    );
+
+    return res.status(200).json({ message: "Recipe saved successfully." });
+  } catch (error) {
+    console.log("🚀 ~ diaryRoute.js save exercise error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+// To remove a saved recipe from the user's diary
+router.post("/recipe/remove", strictVerifyToken, async (req, res) => {
+  const { user_id, recipe_id } = req.body;
+
+  try {
+    if (!user_id || !recipe_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const check = await pool.query(
+      "SELECT * FROM saved_recipes WHERE user_id = $1 AND recipe_id = $2",
+      [user_id, recipe_id]
+    );
+
+    if (check.rowCount < 0) {
+      return res.status(404).json({ message: "Recipe not found in diary." });
+    }
+
+    await pool.query(
+      "DELETE FROM saved_recipes WHERE user_id = $1 AND recipe_id = $2",
+      [user_id, recipe_id]
+    );
+
+    return res
+      .status(200)
+      .json({ message: "Exercise removed from diary successfully." });
+  } catch (error) {
+    console.log("🚀 ~ diaryRoute error:", error);
     return res
       .status(500)
       .json({ message: "Internal server error. Try again later." });

@@ -7,7 +7,12 @@ export const HeaderText = ({ style, children, ellipsis, numOfLines }) => {
     <Text
       ellipsizeMode={ellipsis}
       numberOfLines={numOfLines}
-      style={{ ...style, fontFamily: "Poppins", margin: 0, padding: 0 }}
+      style={{
+        ...style,
+        fontFamily: "Poppins",
+        margin: 0,
+        padding: 0,
+      }}
     >
       {children}
     </Text>

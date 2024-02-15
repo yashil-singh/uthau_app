@@ -3,15 +3,15 @@ import React from "react";
 import { colors } from "../helpers/theme";
 import { BodyText, HeaderText } from "./StyledText";
 
-const RecipeCard = ({ title, cals }) => {
+const RecipeCard = ({ title, cals, imageUrl }) => {
   return (
     <TouchableOpacity
       style={{
         borderRadius: 6,
         borderWidth: 1,
         borderColor: colors.background,
-        width: 150,
-        height: 200,
+        width: 180,
+        height: 230,
         display: "flex",
         alignItems: "center",
       }}
@@ -19,14 +19,14 @@ const RecipeCard = ({ title, cals }) => {
     >
       <Image
         style={{
-          width: 150,
-          height: 140,
+          width: 180,
+          height: 160,
           resizeMode: "cover",
           borderRadius: 6,
           borderBottomLeftRadius: 0,
           borderBottomRightRadius: 0,
         }}
-        source={{ uri: "https://picsum.photos/700" }}
+        source={{ uri: `${imageUrl}` }}
       />
       <View
         style={{

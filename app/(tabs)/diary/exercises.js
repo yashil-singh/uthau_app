@@ -6,6 +6,7 @@ import {
   Modal,
   Image,
   Pressable,
+  Platform,
 } from "react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
@@ -23,6 +24,8 @@ import formatWord from "../../../helpers/formatWord";
 import { Feather } from "@expo/vector-icons";
 import { FontAwesome } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
+import ErrorModal from "../../../components/ErrorModal";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const exercises = () => {
   const { user } = useAuthContext();
@@ -36,6 +39,7 @@ const exercises = () => {
   // Modal related states
   const [openModal, setOpenModal] = useState(false);
   const [modalData, setModalData] = useState([]);
+  const [openErrorModal, setOpenErrorModal] = useState(false);
 
   // When toggling the modal open/close
   const toggleModal = () => {
@@ -44,50 +48,61 @@ const exercises = () => {
 
   // To store the current saved exercises
   const [savedExercises, setSavedExercises] = useState([]);
-
   const [isLoading, setIsLoading] = useState(false);
 
   // States related to messages to display
-  const [message, setMessage] = useState(null);
-  const [saveMessage, setSaveMessage] = useState(null);
   const [responseMessage, setResponseMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [message, setMessage] = useState(null);
 
   // To remove from save
   const onRemove = async ({ user_id, exercise_id }) => {
-    setSaveMessage(null);
+    setResponseMessage(null);
+    setErrorMessage(null);
+    setMessage(null);
     try {
-      await removeSavedExercise({ user_id, exercise_id });
-      setSaveMessage("REMOVED");
+      const response = await removeSavedExercise({ user_id, exercise_id });
+      if (response.success) {
+        setOpenModal(false);
+        setMessage("Exercise removed");
+      } else {
+        setMessage("Failed to remove exercise");
+        setOpenErrorModal(true);
+        setErrorMessage(response.message);
+      }
     } catch (error) {
-      console.log("🚀 ~ error:", error);
-      setMessage("Error removing the exercise.");
+      setMessage("Failed to remove exercise");
+      setErrorMessage(
+        "Unexpected error occurred while removing the exercise. Try again later."
+      );
     }
   };
 
   // To get the saved exercises of the user
   const getSaved = async () => {
-    setMessage(null);
-    setResponseMessage(null);
-    setIsLoading(true);
     try {
       const response = await getSavedExercises(currentUser?.user_id);
 
       if (response.success) {
         const data = response?.data;
 
-        if (data.length <= 0) {
-          setResponseMessage("No saved exercises were found.");
+        if (response.status == 202) {
+          setResponseMessage(response.message);
         }
-        setSavedExercises(data);
-      } else {
-        setMessage(response.message);
-      }
 
-      setIsLoading(false);
+        if (data) {
+          setSavedExercises(data);
+        }
+
+        setMessage("Fetched saved exercises");
+      } else {
+        setOpenErrorModal(true);
+        setErrorMessage(response.message);
+        setMessage("Failed to fetch saved exercises.");
+      }
     } catch (error) {
-      console.log("🚀 ~ error:", error);
-      setMessage("Unexpected error occurred. Try again later.");
-      setIsLoading(false);
+      setOpenErrorModal(true);
+      setErrorMessage("Unexpected error occurred. Try again later.");
       return;
     }
   };
@@ -95,12 +110,32 @@ const exercises = () => {
   useFocusEffect(
     useCallback(() => {
       getSaved();
-    }, [openModal, saveMessage])
+      console.log("FETCHED");
+    }, [message])
   );
 
   return (
     <MainContainer padding={15}>
-      <Modal transparent animationType="fade" visible={openModal}>
+      <ErrorModal
+        openErrorModal={openErrorModal}
+        title={"Error"}
+        message={errorMessage}
+        onClose={() => {
+          setErrorMessage(null);
+          setOpenErrorModal(false);
+        }}
+        onDismiss={() => {
+          setErrorMessage(null);
+          setOpenErrorModal(false);
+        }}
+      />
+      <Modal
+        transparent
+        animationType="slide"
+        visible={openModal}
+        onRequestClose={() => toggleModal()}
+        onDismiss={() => toggleModal()}
+      >
         <View
           style={{
             flex: 1,
@@ -115,13 +150,14 @@ const exercises = () => {
               flexDirection: "row",
               alignItems: "center",
               gap: 30,
+              paddingTop: Platform.OS === "ios" ? 30 : 0,
             }}
           >
             <Feather
               name="arrow-left"
               size={24}
               color="black"
-              onPress={toggleModal}
+              onPress={() => toggleModal()}
             />
             <HeaderText style={{ fontSize: 24 }}>Details</HeaderText>
           </View>
@@ -160,7 +196,6 @@ const exercises = () => {
                           user_id: currentUser?.user_id,
                           exercise_id: item?.exercise_id,
                         });
-                        setOpenModal(false);
                       }}
                     >
                       <FontAwesome
@@ -209,17 +244,20 @@ const exercises = () => {
         />
       ) : (
         <>
-          {message || responseMessage ? (
+          {savedExercises?.length <= 0 ? (
             <View style={{ flex: 1, justifyContent: "center" }}>
+              <HeaderText style={{ textAlign: "center", fontSize: 20 }}>
+                It's a bit empty here!
+              </HeaderText>
               <BodyText
                 style={{
                   fontSize: 16,
                   display: "flex",
                   textAlign: "center",
-                  color: message ? colors.error.normal : colors.black,
+                  color: colors.gray,
                 }}
               >
-                {message || responseMessage}
+                No exercises found in your diary.
               </BodyText>
             </View>
           ) : (
@@ -227,6 +265,7 @@ const exercises = () => {
               data={savedExercises}
               renderItem={({ item, index }) => (
                 <CardOption
+                  desc={"Targeted muscle(s):"}
                   isSaved={true}
                   title={item.exercise_name}
                   target={item.target}
