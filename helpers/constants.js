@@ -1,4 +1,6 @@
-const apiURL = "http://10.50.3.145:4000";
+
+const apiURL = "http://192.168.101.2:4000";
+
 const ERROR_MESSAGES = {
   REQUIRED: "This field is required.",
   NAME_INVALID: "Not a Valid Name.",

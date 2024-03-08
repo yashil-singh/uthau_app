@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import CheckBox from "../../components/CheckBox";
 import InputFields from "../../components/InputFields";
