@@ -42,7 +42,7 @@ const OptionsContainer = ({ children, title, desc, color, onPress }) => {
           <BodyText style={{ color: colors.gray }}>{desc}</BodyText>
         </View>
         <View>
-          <Entypo name="chevron-right" size={24} color="black" />
+          <Entypo name="chevron-right" size={18} color={colors.black} />
         </View>
       </Pressable>
     </Animated.View>

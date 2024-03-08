@@ -28,6 +28,7 @@ const index = () => {
         title="Exercises"
         color={colors.info.dark}
         desc="Find your saved exercises here."
+        onPress={() => router.push("diary/exercises")}
       >
         <MaterialCommunityIcons name="weight-lifter" size={30} color="white" />
       </OptionsContainer>
@@ -35,6 +36,7 @@ const index = () => {
         title="Recipes"
         color={colors.orange.normal}
         desc="Find your saved recipes here."
+        onPress={() => router.push("diary/recipes")}
       >
         <MaterialIcons name="my-library-books" size={30} color="white" />
       </OptionsContainer>

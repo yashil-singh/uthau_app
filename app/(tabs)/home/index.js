@@ -1,14 +1,12 @@
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
-import dayjs, { Dayjs } from "dayjs";
-import React, { useEffect, useState } from "react";
-import { Dimensions, Image, Pressable, ScrollView, View } from "react-native";
+import dayjs from "dayjs";
+import React, { useCallback, useEffect, useState } from "react";
+import { Dimensions, Image, View } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import CircularProgress from "react-native-circular-progress-indicator";
-import { Searchbar } from "react-native-paper";
 import steps from "../../../assets/images/steps.png";
 import MainContainer from "../../../components/MainContainer";
 import Animated, { FadeInDown, FadeInLeft } from "react-native-reanimated";
-import { AnimatedCircularProgress } from "react-native-circular-progress";
 import {
   BodyText,
   HeaderText,
@@ -16,52 +14,53 @@ import {
   SubHeaderText,
 } from "../../../components/StyledText";
 import { colors } from "../../../helpers/theme";
-import { useNavigation, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useAuthContext } from "../../../hooks/useAuthContext";
 import decodeToken from "../../../helpers/decodeToken";
 import AccountContainer from "../../../components/AccountContainer";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLogout } from "../../../hooks/useLogout";
-import useFoodDiary from "../../../hooks/useFoodDiary";
-import { ScreenStackHeaderSearchBarView } from "react-native-screens";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import useFood from "../../../hooks/useFood";
 
 const index = () => {
-  const navigation = useNavigation();
-  useEffect(() => {
-    navigation.setOptions();
-  }, [navigation]);
-  const router = useRouter();
   const { user } = useAuthContext();
   const { logout } = useLogout();
-  const { getLoggedFood } = useFoodDiary();
+  const { getLoggedFood } = useFood();
 
   const [mealTotals, setMealTotals] = useState(null);
-  let totalCaloriesSum = 0;
   const currentDate = dayjs();
-
-  // Calculate the sum of total_calories using forEach
-  mealTotals?.forEach((item) => {
-    const numericCalories = parseFloat(item.total_calories);
-    totalCaloriesSum += isNaN(numericCalories) ? 0 : numericCalories;
-  });
 
   const decodedToken = decodeToken(user);
   const currentUser = decodedToken?.user;
 
-  useEffect(() => {
-    const getFoods = async () => {
-      const user_id = currentUser?.user_id;
-      const date = currentDate.format("YYYY-MM-DD");
+  let totalCaloriesSum = 0;
 
-      const response = await getLoggedFood({ user_id, date });
+  const updateCalories = async () => {
+    const date = currentDate.format("YYYY-MM-DD");
 
+    const response = await getLoggedFood({
+      user_id: currentUser?.user_id,
+      date: date,
+    });
+
+    if (response.success) {
       setMealTotals(response.data.mealTotals);
-    };
+    }
+  };
 
-    getFoods();
-  }, [currentDate]);
+  useFocusEffect(
+    useCallback(() => {
+      updateCalories();
+    }, [])
+  );
+
+  // Calculate the sum of total_calories using forEach
+  mealTotals?.forEach((item) => {
+    const numericCalories = parseFloat(item?.total_calories);
+    totalCaloriesSum += isNaN(numericCalories) ? 0 : numericCalories;
+  });
 
   const [date, setDate] = useState(dayjs());
 
@@ -97,7 +96,7 @@ const index = () => {
   };
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{ paddingHorizontal: 5 }}>
       <KeyboardAwareScrollView showsVerticalScrollIndicator={false}>
         <View
           style={{
@@ -144,25 +143,6 @@ const index = () => {
               </BodyText>
             </View>
           </View>
-          {/* Search bar */}
-          {/* <Animated.View entering={FadeInDown.stiffness()}>
-            <Pressable
-              onPress={() => {
-                router.canGoBack("/(tabs)/diary/searchFood");
-              }}
-            >
-              <Searchbar
-                placeholder="Search food"
-                style={{ borderRadius: 6, backgroundColor: "#f2f2f2" }}
-                iconColor={colors.primary.normal}
-                onChangeText={(text) => {
-                  if (text.length > 0) {
-                    router.push("/(tabs)/diary/searchFood");
-                  }
-                }}
-              />
-            </Pressable>
-          </Animated.View> */}
           {currentUser?.role == "member" && (
             <View
               style={{

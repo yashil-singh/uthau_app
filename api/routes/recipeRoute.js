@@ -5,43 +5,28 @@ const axios = require("axios");
 const strictVerifyToken = require("../helpers/strictVerification");
 const { pool } = require("../dbConfig");
 
-// To get all the exercises
-router.get("/", strictVerifyToken, async (req, res) => {
-  const options = {
-    method: "GET",
-    url: "https://exercisedb.p.rapidapi.com/exercises",
-    params: {
-      limit: "2500",
-      offset: "15",
-    },
-    headers: {
-      "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
-      "X-RapidAPI-Host": process.env.RAPIDAPI_EXERCISE_HOST,
-    },
-  };
-
-  try {
-    const response = await axios.request(options);
-    console.log(response.data);
-  } catch (error) {
-    console.error(error);
-  }
-});
-
-// To get an exercise searched by the user
+// To get results based on user's search query
 router.get("/search/:searchQuery", strictVerifyToken, async (req, res) => {
   const { searchQuery } = req.params;
 
+  if (!searchQuery) {
+    return res.status(400).json({ message: "Invalid request." });
+  }
+
   const options = {
     method: "GET",
-    url: `https://exercisedb.p.rapidapi.com/exercises/name/${searchQuery}`,
+    url: "https://edamam-recipe-search.p.rapidapi.com/api/recipes/v2",
     params: {
-      limit: "2500",
-      offset: "15",
+      type: "public",
+      "field[0]": "uri",
+      q: `${searchQuery}`,
+      beta: "true",
+      random: "false",
     },
     headers: {
+      "Accept-Language": "en",
       "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
-      "X-RapidAPI-Host": process.env.RAPIDAPI_EXERCISE_HOST,
+      "X-RapidAPI-Host": process.env.RAPIDAPI_RECIPE_HOST,
     },
   };
 
@@ -51,41 +36,47 @@ router.get("/search/:searchQuery", strictVerifyToken, async (req, res) => {
 
     return res.status(200).json(data);
   } catch (error) {
-    console.log("🚀 ~ error:", error);
+    console.log("🚀 ~ recipeRoute.js error:", error);
     return res
       .status(500)
       .json({ message: "Internal server error. Try again later." });
   }
 });
 
-// To get exercises according to body part
-router.get("/body-part/:bodyPart", strictVerifyToken, async (req, res) => {
-  const { bodyPart } = req.params;
+// To get results based on selected diet label
+router.get("/getMeal/:meal", strictVerifyToken, async (req, res) => {
+  const { meal } = req.params;
 
-  if (!bodyPart) {
+  if (!meal) {
     return res.status(400).json({ message: "Invalid request." });
   }
 
   const options = {
     method: "GET",
-    url: `https://exercisedb.p.rapidapi.com/exercises/bodyPart/${bodyPart}`,
+    url: "https://edamam-recipe-search.p.rapidapi.com/api/recipes/v2",
     params: {
-      limit: "2500",
-      offset: "15",
+      type: "public",
+      "field[0]": "uri",
+      beta: "true",
+      random: "false",
+      health: "alcohol-free",
+      mealType: `${meal}`,
     },
     headers: {
+      "Accept-Language": "en",
       "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
-      "X-RapidAPI-Host": process.env.RAPIDAPI_EXERCISE_HOST,
+      "X-RapidAPI-Host": process.env.RAPIDAPI_RECIPE_HOST,
     },
   };
 
   try {
     const response = await axios.request(options);
+
     const data = response?.data;
 
     return res.status(200).json(data);
   } catch (error) {
-    console.log("🚀 ~ error:", error);
+    console.log("🚀 ~ recipeRoute.js error:", error);
     return res
       .status(500)
       .json({ message: "Internal server error. Try again later." });

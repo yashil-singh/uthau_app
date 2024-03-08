@@ -1,7 +1,6 @@
 import { Stack } from "expo-router";
-import { colors } from "../../../helpers/theme";
-
-export default function Layout() {
+import { colors } from "../../../../helpers/theme";
+export default () => {
   return (
     <Stack
       screenOptions={{
@@ -17,28 +16,15 @@ export default function Layout() {
       <Stack.Screen
         name="index"
         options={{
-          headerTitle: "Discover",
+          headerTitle: "Friends",
         }}
       />
       <Stack.Screen
-        name="exercises"
+        name="find"
         options={{
-          headerTitle: "Exercises",
-        }}
-      />
-      <Stack.Screen
-        name="recipes"
-        options={{
-          headerTitle: "Recipes",
-        }}
-      />
-      <Stack.Screen
-        name="partner"
-        options={{
-          headerTitle: "",
-          headerShown: false,
+          headerTitle: "Add Friends",
         }}
       />
     </Stack>
   );
-}
+};

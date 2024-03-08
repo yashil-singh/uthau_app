@@ -2,9 +2,10 @@ import axios from "axios";
 import { apiURL } from "../helpers/constants";
 import { useAuthContext } from "./useAuthContext";
 
-const useFoodDiary = () => {
+const useFood = () => {
   const { user } = useAuthContext();
 
+  // Setting up headers to send with the request
   axios.interceptors.request.use((config) => {
     const token = user?.token || null;
 
@@ -15,6 +16,7 @@ const useFoodDiary = () => {
     return config;
   });
 
+  // To fetch the list of logged foods by the user
   const getLoggedFood = async ({ user_id, date }) => {
     try {
       const response = await axios.post(`${apiURL}/diary/get-food-log`, {
@@ -23,7 +25,6 @@ const useFoodDiary = () => {
       });
 
       const data = response?.data;
-
       return {
         success: true,
         data: data,
@@ -37,13 +38,11 @@ const useFoodDiary = () => {
     }
   };
 
+  // To search for a food using the search query provided by the user
   const searchFood = async ({ searchQuery }) => {
-    console.log("🚀 ~ keyword:", searchQuery);
-
     try {
       const response = await axios.get(`${apiURL}/diary/search/${searchQuery}`);
       const data = response?.data;
-      console.log("🚀 ~ data:", data);
 
       return {
         success: true,
@@ -57,6 +56,7 @@ const useFoodDiary = () => {
     }
   };
 
+  // To log the food selected by the user
   const logFood = async ({
     user_id,
     date,
@@ -70,7 +70,7 @@ const useFoodDiary = () => {
     selectedMeal,
   }) => {
     try {
-      const response = await axios.post(`${apiURL}/diary/log-food`, {
+      await axios.post(`${apiURL}/diary/log-food`, {
         user_id,
         date,
         foodId,
@@ -82,10 +82,6 @@ const useFoodDiary = () => {
         quantity,
         selectedMeal,
       });
-
-      const data = response?.data;
-
-      console.log(data);
 
       return {
         success: true,
@@ -102,4 +98,4 @@ const useFoodDiary = () => {
   return { searchFood, getLoggedFood, logFood };
 };
 
-export default useFoodDiary;
+export default useFood;

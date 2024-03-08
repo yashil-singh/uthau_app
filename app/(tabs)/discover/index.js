@@ -5,8 +5,11 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { colors } from "../../../helpers/theme";
+import { useRouter } from "expo-router";
 
 const index = () => {
+  const router = useRouter();
+
   return (
     <View
       style={{
@@ -20,6 +23,7 @@ const index = () => {
         title="Exercises"
         color={colors.info.dark}
         desc="Search from a collection of exercises here."
+        onPress={() => router.push("discover/exercises")}
       >
         <MaterialCommunityIcons name="weight-lifter" size={35} color="white" />
       </OptionsContainer>
@@ -28,6 +32,7 @@ const index = () => {
         title="Recipes"
         color={colors.orange.normal}
         desc="Search from a collection of recipes here."
+        onPress={() => router.push("discover/recipes")}
       >
         <MaterialIcons name="my-library-books" size={35} color="white" />
       </OptionsContainer>
@@ -36,6 +41,7 @@ const index = () => {
         title="Find Partner"
         color={colors.secondary.normal}
         desc="Search for gym partners to get gains together."
+        onPress={() => router.push("discover/partner")}
       >
         <MaterialIcons name="person-search" size={35} color="white" />
       </OptionsContainer>
