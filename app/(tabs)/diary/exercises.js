@@ -25,7 +25,6 @@ import { Feather } from "@expo/vector-icons";
 import { FontAwesome } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import ErrorModal from "../../../components/ErrorModal";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 const exercises = () => {
   const { user } = useAuthContext();
@@ -110,8 +109,7 @@ const exercises = () => {
   useFocusEffect(
     useCallback(() => {
       getSaved();
-      console.log("FETCHED");
-    }, [message])
+    }, [message, openModal])
   );
 
   return (

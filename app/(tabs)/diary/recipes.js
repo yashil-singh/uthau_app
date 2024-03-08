@@ -88,7 +88,9 @@ const recipes = () => {
           setResponseMessage(response.message);
         }
 
-        setSavedRecipes(data);
+        if (data) {
+          setSavedRecipes(data);
+        }
       } else {
         setOpenErrorModal(true);
         setErrorMessage(response.message);
