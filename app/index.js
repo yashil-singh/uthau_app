@@ -1,9 +1,14 @@
-import { Redirect } from "expo-router";
-import { useAuthContext } from "../hooks/useAuthContext";
+import { StyleSheet, Text, View } from "react-native";
+import React from "react";
 
-const Index = () => {
-  const { user } = useAuthContext();
-  return <Redirect href={user ? "/home" : "/login"} />;
+const index = () => {
+  return (
+    <View>
+      <Text>index</Text>
+    </View>
+  );
 };
 
-export default Index;
+export default index;
+
+const styles = StyleSheet.create({});
