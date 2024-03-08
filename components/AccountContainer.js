@@ -9,11 +9,19 @@ const AccountContainer = ({ imageURI, size, onPress }) => {
         width: { size },
         height: { size },
         borderRadius: 25,
-        backgroundColor: colors.gray,
+        backgroundColor: "#e3e3e3",
       }}
       onPress={onPress}
     >
-      <Image src={imageURI} width={size} height={size} resizeMode="cover" />
+      <Image
+        source={{
+          uri: imageURI,
+        }}
+        width={size}
+        height={size}
+        resizeMode="cover"
+        style={{ borderRadius: 25 }}
+      />
     </Pressable>
   );
 };

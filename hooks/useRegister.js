@@ -26,8 +26,6 @@ const useRegister = () => {
         weightGoal,
       });
 
-      console.log(response);
-
       const data = response?.data;
 
       return {

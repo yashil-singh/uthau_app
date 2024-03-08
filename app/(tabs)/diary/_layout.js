@@ -23,7 +23,7 @@ export default function Layout() {
       <Stack.Screen
         name="foodLog"
         options={{
-          headerTitle: "Food Log",
+          headerTitle: "Food Diary",
         }}
       />
       <Stack.Screen
@@ -36,6 +36,18 @@ export default function Layout() {
         name="nutrition"
         options={{
           headerTitle: "Nutrition",
+        }}
+      />
+      <Stack.Screen
+        name="exercises"
+        options={{
+          headerTitle: "Exercises",
+        }}
+      />
+      <Stack.Screen
+        name="recipes"
+        options={{
+          headerTitle: "Recipes",
         }}
       />
     </Stack>

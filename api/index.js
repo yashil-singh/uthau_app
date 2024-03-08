@@ -10,6 +10,7 @@ const exerciseRoute = require("./routes/exerciseRoute");
 const recipeRoute = require("./routes/recipeRoute");
 const usersRoute = require("./routes/usersRoute");
 
+
 // Middlewares
 app.use(cors());
 app.use(express.json());

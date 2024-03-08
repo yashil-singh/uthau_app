@@ -28,7 +28,7 @@ const register = () => {
     reset,
   } = useForm();
 
-  const validateForm = async (email, password) => {
+  const validateForm = async ({ email, password }) => {
     setError(null);
     try {
       await axios.post(`${apiURL}/auth/check-user`, {
@@ -43,10 +43,7 @@ const register = () => {
   };
 
   const nextPage = async (data) => {
-    const valid = await validateForm(
-      control._formValues.email,
-      control._formValues.password
-    );
+    const valid = await validateForm(data);
     if (valid) {
       dispatch({ type: "SET_DATA", payload: data });
       router.push("/about");
@@ -57,26 +54,6 @@ const register = () => {
 
   const password = useRef({});
   password.current = watch("password", "");
-
-  // const { register } = useRegister();
-
-  // const onSubmit = async (data) => {
-  //   const { name, email, password } = data;
-
-  //   try {
-  //     const response = await register({ name, email, password });
-  //     if (response.success) {
-  //       reset();
-  //       setError(null);
-  //       router.push(`/aboutYou/${email}`);
-  //     } else {
-  //       setError(response.error);
-  //     }
-  //   } catch (error) {
-  //     console.log("🚀 ~ file: register.js:28 ~ error:", error);
-  //     setError("Unexpected error occured. Try again later.");
-  //   }
-  // };
 
   return (
     <SafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
@@ -104,6 +81,7 @@ const register = () => {
           <View style={{ gap: 15 }}>
             <Controller
               control={control}
+              disabled={isSubmitting}
               name="name"
               rules={{
                 required: { value: true, message: ERROR_MESSAGES.REQUIRED },
@@ -128,6 +106,7 @@ const register = () => {
             />
             <Controller
               control={control}
+              disabled={isSubmitting}
               name="email"
               rules={{
                 required: { value: true, message: ERROR_MESSAGES.REQUIRED },
@@ -150,6 +129,7 @@ const register = () => {
             />
             <Controller
               control={control}
+              disabled={isSubmitting}
               name="password"
               rules={{
                 required: { value: true, message: ERROR_MESSAGES.REQUIRED },
@@ -168,6 +148,7 @@ const register = () => {
             />
             <Controller
               control={control}
+              disabled={isSubmitting}
               name="confirmPassword"
               rules={{
                 required: { value: true, message: ERROR_MESSAGES.REQUIRED },

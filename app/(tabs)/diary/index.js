@@ -5,18 +5,12 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
 import { colors } from "../../../helpers/theme";
 import { useRouter } from "expo-router";
+import MainContainer from "../../../components/MainContainer";
 
 const index = () => {
   const router = useRouter();
   return (
-    <View
-      style={{
-        padding: 15,
-        flex: 1,
-        backgroundColor: colors.white,
-        gap: 10,
-      }}
-    >
+    <MainContainer padding={15} gap={10}>
       <OptionsContainer
         title="Food Log"
         color={colors.warning.normal}
@@ -34,6 +28,7 @@ const index = () => {
         title="Exercises"
         color={colors.info.dark}
         desc="Find your saved exercises here."
+        onPress={() => router.push("diary/exercises")}
       >
         <MaterialCommunityIcons name="weight-lifter" size={30} color="white" />
       </OptionsContainer>
@@ -41,10 +36,11 @@ const index = () => {
         title="Recipes"
         color={colors.orange.normal}
         desc="Find your saved recipes here."
+        onPress={() => router.push("diary/recipes")}
       >
         <MaterialIcons name="my-library-books" size={30} color="white" />
       </OptionsContainer>
-    </View>
+    </MainContainer>
   );
 };
 

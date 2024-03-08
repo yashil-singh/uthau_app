@@ -20,6 +20,25 @@ export default function Layout() {
           headerTitle: "Discover",
         }}
       />
+      <Stack.Screen
+        name="exercises"
+        options={{
+          headerTitle: "Exercises",
+        }}
+      />
+      <Stack.Screen
+        name="recipes"
+        options={{
+          headerTitle: "Recipes",
+        }}
+      />
+      <Stack.Screen
+        name="partner"
+        options={{
+          headerTitle: "",
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

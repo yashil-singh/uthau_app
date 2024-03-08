@@ -4,10 +4,8 @@ import { useAuthContext } from "../../../hooks/useAuthContext";
 import MainContainer from "../../../components/MainContainer";
 import { BodyText } from "../../../components/StyledText";
 import useResendVerification from "../../../hooks/useResendVerification";
-import { useLocalSearchParams } from "expo-router";
 import { colors } from "../../../helpers/theme";
 import { useLogout } from "../../../hooks/useLogout";
-import { jwtDecode } from "jwt-decode";
 import { decode as atob, encode as btoa } from "base-64";
 import { FontAwesome } from "@expo/vector-icons";
 import { Entypo } from "@expo/vector-icons";
@@ -45,7 +43,7 @@ const emailVerification = () => {
   };
 
   return (
-    <MainContainer>
+    <MainContainer padding={15}>
       <View
         style={{
           flex: 1,

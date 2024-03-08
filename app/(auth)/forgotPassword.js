@@ -62,6 +62,7 @@ const forgotPassword = () => {
         <Controller
           control={control}
           name="email"
+          disabled={isSubmitting}
           rules={{
             required: { value: true, message: ERROR_MESSAGES.REQUIRED },
           }}
