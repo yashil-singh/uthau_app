@@ -1,10 +1,7 @@
 import { Stack, useNavigation } from "expo-router";
 import { useAuthContext } from "../../hooks/useAuthContext";
 import { useEffect } from "react";
-import { Text } from "react-native";
-import { View } from "react-native-web";
 import { RegisterContextProvider } from "../../context/RegisterContext";
-import { useRegisterContext } from "../../hooks/useRegisterContext";
 
 export default function Layout() {
   const { user } = useAuthContext();

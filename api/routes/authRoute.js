@@ -35,6 +35,74 @@ const sendMail = async (email, subject, body) => {
   }
 };
 
+router.post("/admin/register", async (req, res) => {
+  try {
+    const { username, name, password } = req.body;
+
+    if (!username || !name || !password) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    await pool.query(
+      "INSERT into admin_users (username, name, password) VALUES ($1, $2, $3)",
+      [username, name, hashedPassword]
+    );
+
+    return res.status(201).json({ message: "Registration successful." });
+  } catch (error) {
+    console.log("🚀 ~ authRoute.js error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+// Endpoint to login an admin
+router.post("/admin/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const check = await pool.query(
+      "SELECT * from admin_users WHERE username = $1",
+      [username]
+    );
+
+    if (check.rowCount == 0) {
+      return res.status(401).json({ message: "Invalid username. Try again." });
+    }
+
+    const user = check.rows[0];
+
+    // Check if password is correct
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res
+        .status(401)
+        .json({ message: "Incorrect password. Try again." });
+    }
+
+    const token = jwt.sign({ user: user }, process.env.SECRET_KEY);
+
+    return res
+      .status(200)
+      .json({ message: "Logged in successfully.", token: token });
+  } catch (error) {
+    console.log("🚀 ~ authRoute.js error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
 // Endpoint to login a user
 router.post("/login", async (req, res) => {
   try {

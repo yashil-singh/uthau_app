@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import CheckBox from "../../components/CheckBox";
 import InputFields from "../../components/InputFields";
@@ -86,9 +86,7 @@ const login = () => {
               <Controller
                 control={control}
                 name="password"
-                rules={{
-                  required: { value: true, message: ERROR_MESSAGES.REQUIRED },
-                }}
+                disabled={isSubmitting}
                 render={({ field: { onChange, value } }) => (
                   <InputFields
                     title="Password"
