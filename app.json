@@ -14,13 +14,15 @@
     "assetBundlePatterns": ["**/*"],
     "scheme": "uthau",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yashilsingh.uthau"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.yashilsingh.uthau"
     },
     "web": {
       "favicon": "./assets/favicon.png"
