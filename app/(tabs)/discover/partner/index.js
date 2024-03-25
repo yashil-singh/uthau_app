@@ -1,24 +1,146 @@
-import { View, TouchableOpacity, Image, FlatList } from "react-native";
-import React, { useState } from "react";
+import {
+  View,
+  TouchableOpacity,
+  Image,
+  FlatList,
+  Platform,
+} from "react-native";
+import React, { useState, useEffect } from "react";
 import MainContainer from "../../../../components/MainContainer";
 import {
   BodyText,
   HeaderText,
+  LinkText,
   SubHeaderText,
 } from "../../../../components/StyledText";
 import { colors } from "../../../../helpers/theme";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import * as Location from "expo-location";
+import { useUsers } from "../../../../hooks/useUsers";
+import { useAuthContext } from "../../../../hooks/useAuthContext";
+import decodeToken from "../../../../helpers/decodeToken";
+import ErrorModal from "../../../../components/ErrorModal";
+import { Badge } from "react-native-paper";
+import { userRadius } from "../../../../helpers/constants";
 
 const index = () => {
+  const { user } = useAuthContext();
+  const decodedToken = decodeToken(user);
+  const currentUser = decodedToken?.user;
+  const user_id = currentUser?.user_id;
+
   const router = useRouter();
-  const [friends, setFriends] = useState([
-    { user_id: 1, name: "Yashil Singh", distance: 2.5 },
-    { user_id: 2, name: "Sangya Vaidya", distance: 7 },
-  ]);
+  const [friends, setFriends] = useState([]);
+  const [requests, setRequests] = useState([]);
+
+  const { getAllFriends, getUserRequestReceived } = useUsers();
+
+  const [location, setLocation] = useState(null);
+
+  //Modal related states
+  const [openErrorModal, setOpenErrorModal] = useState(false);
+  const [openPermissionErrorModal, setOpenPermissionErrorModal] =
+    useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  useEffect(() => {
+    const getLocationPermission = async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        setOpenPermissionErrorModal(true);
+        return;
+      }
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    };
+
+    getLocationPermission();
+  }, []);
+
+  useEffect(() => {
+    const getFriends = async () => {
+      const response = await getAllFriends({ user_id });
+
+      if (response.success) {
+        const connections = response.data;
+
+        setFriends(connections.data);
+      }
+    };
+
+    const getRequests = async () => {
+      const lat = location?.coords.latitude;
+      const lng = location?.coords.longitude;
+      const radius = userRadius;
+      const response = await getUserRequestReceived({
+        user_id,
+        lat,
+        lng,
+        radius,
+      });
+
+      if (response.success) {
+        setRequests(response.requests);
+      }
+    };
+
+    getFriends();
+    getRequests();
+  }, [user_id, location]);
+
   return (
     <MainContainer padding={15} gap={15}>
-      <SubHeaderText style={{ fontSize: 18 }}>Your Friends</SubHeaderText>
+      <ErrorModal
+        openErrorModal={openPermissionErrorModal}
+        title={"Permission Required"}
+        message={"Location permession is required to access this feature."}
+        onClose={() => {
+          setOpenErrorModal(false);
+          router.replace("discover");
+        }}
+        onDismiss={() => {
+          setOpenErrorModal(false);
+          router.replace("discover");
+        }}
+      />
+
+      <ErrorModal
+        openErrorModal={openErrorModal}
+        title={"Error"}
+        message={errorMessage}
+        onClose={() => {
+          setOpenErrorModal(false);
+          router.replace("discover");
+        }}
+        onDismiss={() => {
+          setOpenErrorModal(false);
+          router.replace("discover");
+        }}
+      />
+
+      <View
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <BodyText style={{ fontSize: 16 }}>Messages</BodyText>
+        <View style={{ position: "relative", paddingRight: 10 }}>
+          <LinkText
+            href={"/discover/partner/requests"}
+            style={{ fontSize: 16, color: colors.links }}
+          >
+            Requests
+          </LinkText>
+          <Badge style={{ position: "absolute", top: -15, right: 0 }}>
+            {requests.length}
+          </Badge>
+        </View>
+      </View>
 
       {friends.length > 0 ? (
         <FlatList
@@ -41,6 +163,9 @@ const index = () => {
                 gap: 12,
                 marginBottom: 6,
               }}
+              onPress={() =>
+                router.push(`/discover/partner/chat/${item.item.user_id}`)
+              }
             >
               <Image
                 source={{
@@ -58,9 +183,6 @@ const index = () => {
                 <SubHeaderText style={{ fontSize: 15 }}>
                   {item.item.name}
                 </SubHeaderText>
-                <BodyText style={{ color: colors.gray }}>
-                  Distance: {item.item.distance} km
-                </BodyText>
               </View>
               <Feather name="send" size={24} color={colors.primary.normal} />
             </TouchableOpacity>

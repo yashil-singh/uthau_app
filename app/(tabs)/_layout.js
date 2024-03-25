@@ -1,4 +1,4 @@
-import { Tabs, useNavigation, useRouter } from "expo-router";
+import { Tabs, useFocusEffect, useNavigation, useRouter } from "expo-router";
 import { colors } from "../../helpers/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthContext } from "../../hooks/useAuthContext";
@@ -7,10 +7,11 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function _layout() {
   const { user } = useAuthContext();
+
   const email = user?.email;
   const navigation = useNavigation();
 
-  useEffect(() => {
+  useFocusEffect(() => {
     if (!user) {
       navigation.navigate("(auth)", { screen: "login" });
     } else {
@@ -23,7 +24,7 @@ export default function _layout() {
         });
       }
     }
-  }, [user, navigation]);
+  });
 
   return (
     <Tabs

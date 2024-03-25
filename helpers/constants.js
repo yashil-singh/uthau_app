@@ -1,9 +1,9 @@
-
-const apiURL = "http://192.168.101.2:4000";
+const apiURL = "http://192.168.101.3:4000";
 
 const ERROR_MESSAGES = {
   REQUIRED: "This field is required.",
   NAME_INVALID: "Not a Valid Name.",
+  INTERNAL_SERVER_ERROR: "Internal server error. Try again later.",
 };
 
 const REGEX = {
@@ -12,4 +12,6 @@ const REGEX = {
     /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i,
 };
 
-export { apiURL, REGEX, ERROR_MESSAGES };
+const userRadius = 20;
+
+export { apiURL, REGEX, ERROR_MESSAGES, userRadius };
