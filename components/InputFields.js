@@ -22,7 +22,6 @@ const InputFields = ({
       <BodyText style={{ ...textStyle }}>{title}</BodyText>
       <View
         style={{
-          backgroundColor: "#f2f2f2",
           paddingHorizontal: 12,
           borderRadius: 5,
           flexDirection: "row",
@@ -33,7 +32,7 @@ const InputFields = ({
             ? colors.error.normal
             : isFocused
             ? colors.primary.normal
-            : colors.white,
+            : colors.lightGray,
         }}
       >
         <TextInput

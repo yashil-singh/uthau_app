@@ -25,6 +25,18 @@ export default () => {
           headerTitle: "Add Friends",
         }}
       />
+      <Stack.Screen
+        name="requests"
+        options={{
+          headerTitle: "Requests",
+        }}
+      />
+      <Stack.Screen
+        name="chat"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 };
