@@ -1,16 +1,15 @@
 import axios from "axios";
 import React from "react";
 import { apiURL } from "../helpers/constants";
+import * as SecureStore from "expo-secure-store";
+import { useAuthContext } from "./useAuthContext";
 
 export const useUsers = () => {
+  const { dispatch } = useAuthContext();
+
   const getUserDetail = async ({ user_id }) => {
     try {
-      const response = await axios.get(
-        `${apiURL}/users/get?user_id=${user_id}`,
-        {
-          user_id,
-        }
-      );
+      const response = await axios.get(`${apiURL}/users/get/${user_id}`);
 
       const data = response?.data;
 
@@ -20,6 +19,54 @@ export const useUsers = () => {
       };
     } catch (error) {
       console.log("🚀 ~ useUsers.js getUserDetail error:", error);
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const updateUserProfile = async ({
+    user_id,
+    name,
+    dob,
+    gender,
+    weight,
+    height,
+    calorie_burn,
+    calorie_intake,
+    image,
+  }) => {
+    try {
+      const response = await axios.post(`${apiURL}/users/update`, {
+        user_id,
+        name,
+        dob,
+        gender,
+        weight,
+        height,
+        calorie_burn,
+        calorie_intake,
+        image,
+      });
+
+      const data = response?.data;
+      console.log("🚀 ~ data:", data);
+
+      const storedToken = await SecureStore.getItemAsync("authToken");
+
+      if (storedToken) {
+        await SecureStore.setItemAsync("authToken", JSON.stringify(data));
+      }
+
+      dispatch({ type: "LOGIN", payload: data });
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      console.log("🚀 ~ error:", error);
+
       return {
         success: false,
         message: error.response?.data.message,
@@ -196,6 +243,7 @@ export const useUsers = () => {
 
   return {
     getUserDetail,
+    updateUserProfile,
     updateUserLocation,
     getAllFriends,
     getNearByUsers,

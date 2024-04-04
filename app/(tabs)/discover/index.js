@@ -6,9 +6,14 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { colors } from "../../../helpers/theme";
 import { useRouter } from "expo-router";
+import { useAuthContext } from "../../../hooks/useAuthContext";
+import decodeToken from "../../../helpers/decodeToken";
 
 const index = () => {
   const router = useRouter();
+  const { user } = useAuthContext();
+  const decodedToken = decodeToken(user);
+  const userDetails = decodedToken?.user;
 
   return (
     <View
@@ -36,23 +41,28 @@ const index = () => {
       >
         <MaterialIcons name="my-library-books" size={35} color="white" />
       </OptionsContainer>
+      {userDetails?.role === "normal" || userDetails?.role === "member" ? (
+        <>
+          <OptionsContainer
+            title="Find Partner"
+            color={colors.secondary.normal}
+            desc="Search for gym partners to get gains together."
+            onPress={() => router.push("discover/partner")}
+          >
+            <MaterialIcons name="person-search" size={35} color="white" />
+          </OptionsContainer>
 
-      <OptionsContainer
-        title="Find Partner"
-        color={colors.secondary.normal}
-        desc="Search for gym partners to get gains together."
-        onPress={() => router.push("discover/partner")}
-      >
-        <MaterialIcons name="person-search" size={35} color="white" />
-      </OptionsContainer>
-
-      <OptionsContainer
-        title="AR Buddies"
-        color={colors.error.normal}
-        desc="Complete goals and find your AR buddies here."
-      >
-        <MaterialIcons name="videogame-asset" size={35} color="white" />
-      </OptionsContainer>
+          <OptionsContainer
+            title="AR Buddies"
+            color={colors.error.normal}
+            desc="Complete goals and find your AR buddies here."
+          >
+            <MaterialIcons name="videogame-asset" size={35} color="white" />
+          </OptionsContainer>
+        </>
+      ) : (
+        <></>
+      )}
     </View>
   );
 };

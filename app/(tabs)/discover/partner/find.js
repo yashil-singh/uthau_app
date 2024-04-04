@@ -99,6 +99,8 @@ const find = () => {
         user_id: user_id,
       });
 
+      console.log("🚀 ~ nearbyUsersResponse:", nearbyUsersResponse);
+
       if (nearbyUsersResponse.success) {
         setNearbyUsers(nearbyUsersResponse.nearbyUsers);
       }
@@ -237,7 +239,9 @@ const find = () => {
             alignItems: "center",
           }}
         >
-          <HeaderText style={{ fontSize: 20 }}>Oops!</HeaderText>
+          <HeaderText style={{ fontSize: 20 }}>
+            Oops! It's a bit empty here.
+          </HeaderText>
           <BodyText
             style={{
               maxWidth: "75%",

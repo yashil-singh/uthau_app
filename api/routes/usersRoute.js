@@ -3,6 +3,7 @@ const router = express.Router();
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const { pool } = require("../dbConfig");
 
@@ -62,20 +63,25 @@ router.get("/get-all", async (req, res) => {
   }
 });
 
-router.get("/get", async (req, res) => {
-  const { user_id } = req.query;
+router.get("/get/:user_id", async (req, res) => {
+  const { user_id } = req.params;
   console.log("🚀 ~ user_id:", user_id);
 
   try {
+    if (!user_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
     const result = await pool.query(
-      "SELECT user_id, name, email, image, role, created_at, age, gender, height, weight, activity_level, calorie_intake, calorie_burn, weight_goal FROM users WHERE user_id = $1",
+      "SELECT user_id, name, email, dob, image, role, created_at, gender, height, weight, activity_level, calorie_intake, calorie_burn, weight_goal FROM users WHERE user_id = $1",
       [user_id]
     );
 
     const user = result.rows;
+    console.log("🚀 ~ user:", user);
 
     if (user.length === 0) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ message: "User not found" });
     }
 
     return res.status(200).json(user);
@@ -83,7 +89,103 @@ router.get("/get", async (req, res) => {
     console.log("🚀 ~ usersRoute.js getuser error:", error);
     return res
       .status(500)
-      .json({ error: "Internal server error. Try again later." });
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.post("/update", async (req, res) => {
+  try {
+    const {
+      user_id,
+      name,
+      dob,
+      gender,
+      weight,
+      height,
+      calorie_burn,
+      calorie_intake,
+      image,
+    } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [user_id]
+    );
+    if (userCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const currentDate = new Date();
+
+    if (new Date(dob) >= currentDate) {
+      return res
+        .status(400)
+        .json({ message: "Invalid date of birth received." });
+    }
+
+    if (!(gender !== "Male" || gender !== "Female")) {
+      return res.status(400).json({ message: "Invalid gender received." });
+    }
+
+    if (weight <= 15 || weight >= 400) {
+      return res.status(400).json({ message: "Invalid weight received." });
+    }
+
+    if (height <= 10 || height >= 250) {
+      return res.status(400).json({ message: "Invalid height received." });
+    }
+
+    if (calorie_burn < 1200 || calorie_burn > 4000) {
+      return res
+        .status(400)
+        .json({ message: "Invalid calorie burn received." });
+    }
+
+    if (calorie_intake < 1200 || calorie_intake > 4000) {
+      return res
+        .status(400)
+        .json({ message: "Invalid calorie intake received." });
+    }
+
+    const result = await pool.query(
+      `UPDATE users
+    SET name = $1, dob = $2, gender = $3, weight = $4, height = $5, calorie_burn = $6, calorie_intake = $7, image = $8
+    WHERE user_id = $9 
+    RETURNING *`,
+      [
+        name,
+        dob,
+        gender,
+        weight,
+        height,
+        calorie_burn,
+        calorie_intake,
+        image,
+        user_id,
+      ]
+    );
+
+    const user = result.rows[0];
+    const isVerified = user.isVerified;
+    console.log("🚀 ~ isVerified:", isVerified);
+
+    const token = jwt.sign({ user: user }, process.env.SECRET_KEY);
+
+    return res.status(201).json({
+      token: token,
+      isVerified: isVerified,
+    });
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
   }
 });
 
@@ -272,6 +374,7 @@ router.get("/friends/get-all", async (req, res) => {
       p.receiver_id,
         u.user_id,
         u.name,
+        u.email,
         u.image,
         u.longitude,
         u.latitude,
@@ -341,6 +444,8 @@ router.get("/friends/get-nearby", async (req, res) => {
         return;
       }
 
+      console.log(user);
+
       const longitude = user.longitude;
       const latitude = user.latitude;
 
@@ -354,6 +459,7 @@ router.get("/friends/get-nearby", async (req, res) => {
       };
 
       const distance = calculateDistance(location, userLocation);
+      console.log("🚀 ~ distance:", distance);
 
       if (distance <= parseFloat(radius)) {
         userDistance.push({ user_id: user.user_id, distance: distance });
@@ -374,6 +480,7 @@ router.get("/friends/get-nearby", async (req, res) => {
 
       return user;
     });
+    console.log("🚀 ~ combine:", combine);
 
     const nearbyUsers = combine.filter((user) => {
       if (user.distance != undefined || user.distance != null) {

@@ -109,6 +109,18 @@ router.post("/login", async (req, res) => {
     // Retrieve the body of the request
     const { email, password } = req.body;
 
+    if (!email) {
+      return res
+        .status(400)
+        .json({ message: "Invalid request. Email address is required." });
+    }
+
+    if (!password) {
+      return res
+        .status(400)
+        .json({ message: "Invalid request. Password is required." });
+    }
+
     // Check if user exists
     const registeredUser = await pool.query(
       `SELECT user_id, name, email, image, isVerified, role, gender, weight, height, activity_level, calorie_intake, calorie_burn, weight_goal FROM users WHERE email = $1`,

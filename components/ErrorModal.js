@@ -18,10 +18,10 @@ const ErrorModal = ({ openErrorModal, title, message, onDismiss, onClose }) => {
           <View style={{ flexDirection: "row", gap: 5, alignItems: "center" }}>
             <MaterialIcons
               name="error-outline"
-              size={24}
+              size={22}
               color={colors.error.normal}
             />
-            <SubHeaderText style={{ fontSize: 18 }}>{title}</SubHeaderText>
+            <SubHeaderText style={{ fontSize: 16 }}>{title}</SubHeaderText>
           </View>
 
           <BodyText>{message}</BodyText>

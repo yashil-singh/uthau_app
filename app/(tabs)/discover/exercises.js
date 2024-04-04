@@ -198,7 +198,7 @@ const exercises = () => {
 
   const fetchSavedExercises = async () => {
     try {
-      const response = await getSavedExercises(currentUser.user_id);
+      const response = await getSavedExercises(currentUser?.user_id);
 
       const data = response?.data;
 

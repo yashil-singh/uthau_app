@@ -2,14 +2,18 @@ import { Stack, useNavigation } from "expo-router";
 import { useAuthContext } from "../../hooks/useAuthContext";
 import { useEffect } from "react";
 import { RegisterContextProvider } from "../../context/RegisterContext";
+import decodeToken from "../../helpers/decodeToken";
 
 export default function Layout() {
   const { user } = useAuthContext();
+  const decodedToken = decodeToken(user);
+  const userDetails = decodedToken?.user;
+
   const navigation = useNavigation();
 
   useEffect(() => {
     if (user) {
-      if (user.isVerified) {
+      if (userDetails?.isverified) {
         navigation.navigate("(tabs)", { screen: "home" });
       } else {
         navigation.navigate("(verification)", { screen: "emailVerification" });

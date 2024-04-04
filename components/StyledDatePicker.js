@@ -1,28 +1,25 @@
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { View, Text, Pressable, TextInput } from "react-native";
 import React, { useState } from "react";
+import { Feather } from "@expo/vector-icons";
 import { BodyText } from "./StyledText";
 import { colors } from "../helpers/theme";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Platform } from "react-native";
 
-const InputFields = ({
+const StyledDatePicker = ({
   title,
   placeholder,
-  type,
-  isPassword,
   value,
   onChangeText,
   isInvalid,
   errorText,
   textStyle,
   isEditable,
+  onPress,
 }) => {
-  const [isSecure, setIsSecure] = useState(isPassword);
   const [isFocused, setIsFocused] = useState(false);
   return (
     <View style={{ gap: 5 }}>
       <BodyText style={{ ...textStyle }}>{title}</BodyText>
-      <View
+      <Pressable
         style={{
           paddingHorizontal: 12,
           borderRadius: 5,
@@ -35,9 +32,8 @@ const InputFields = ({
             : isFocused
             ? colors.primary.normal
             : colors.lightGray,
-          backgroundColor:
-            isEditable == false ? colors.lightGray : colors.white,
         }}
+        onPress={onPress}
       >
         <TextInput
           style={{
@@ -47,37 +43,15 @@ const InputFields = ({
             flex: 1,
           }}
           placeholder={placeholder}
-          secureTextEntry={isSecure}
           value={value}
-          keyboardType={
-            isPassword == true
-              ? isSecure
-                ? "default"
-                : "visible-password"
-              : type
-          }
           onChangeText={onChangeText}
           onBlur={() => setIsFocused(false)}
           onFocus={() => setIsFocused(true)}
           editable={isEditable}
         />
-        <Pressable onPress={() => setIsSecure(!isSecure)}>
-          {isPassword &&
-            (isSecure ? (
-              <MaterialCommunityIcons
-                name="eye-off-outline"
-                size={28}
-                color="gray"
-              />
-            ) : (
-              <MaterialCommunityIcons
-                name="eye-outline"
-                size={28}
-                color="gray"
-              />
-            ))}
-        </Pressable>
-      </View>
+
+        <Feather name="calendar" size={20} color="gray" />
+      </Pressable>
       {errorText && (
         <BodyText
           style={{
@@ -92,4 +66,4 @@ const InputFields = ({
   );
 };
 
-export default InputFields;
+export default StyledDatePicker;

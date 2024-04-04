@@ -115,7 +115,7 @@ const recipes = () => {
 
   const fetchSavedRecipes = async () => {
     try {
-      const response = await getSavedRecipes(currentUser.user_id);
+      const response = await getSavedRecipes(currentUser?.user_id);
 
       const data = response?.data;
 
@@ -157,7 +157,7 @@ const recipes = () => {
     setErrorMessage(null);
     try {
       const response = await saveRecipe({
-        user_id: currentUser.user_id,
+        user_id: currentUser?.user_id,
         recipe_id,
         recipe_name,
         ingredients,

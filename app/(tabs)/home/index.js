@@ -14,7 +14,7 @@ import {
   SubHeaderText,
 } from "../../../components/StyledText";
 import { colors } from "../../../helpers/theme";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useAuthContext } from "../../../hooks/useAuthContext";
 import decodeToken from "../../../helpers/decodeToken";
 import AccountContainer from "../../../components/AccountContainer";
@@ -109,7 +109,7 @@ const index = () => {
           <AccountContainer
             size={40}
             imageURI={currentUser?.image}
-            onPress={logout}
+            onPress={() => router.push("/home/account")}
           />
           <Ionicons name="ios-notifications" size={30} color="black" />
         </View>
@@ -143,7 +143,7 @@ const index = () => {
               </BodyText>
             </View>
           </View>
-          {currentUser?.role == "member" && (
+          {/* {currentUser?.role == "member" && (
             <View
               style={{
                 flexDirection: "row",
@@ -164,7 +164,7 @@ const index = () => {
                 <BodyText>28 Days Left</BodyText>
               </View>
             </View>
-          )}
+          )} */}
 
           {/* Calories Container */}
           <Animated.View entering={FadeInDown.delay(200).springify()}>
@@ -187,7 +187,7 @@ const index = () => {
                 <HeaderText style={{ fontSize: 18, marginBottom: 5 }}>
                   Calories
                 </HeaderText>
-                <LinkText href="" style={{ paddingBottom: 10 }}>
+                <LinkText href="/diary" style={{ paddingBottom: 10 }}>
                   View Details
                 </LinkText>
               </View>

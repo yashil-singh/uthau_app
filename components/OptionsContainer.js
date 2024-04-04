@@ -3,7 +3,6 @@ import React from "react";
 import { Entypo } from "@expo/vector-icons";
 import { BodyText, HeaderText, SubHeaderText } from "./StyledText";
 import { colors } from "../helpers/theme";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 const OptionsContainer = ({ children, title, desc, color, onPress }) => {
@@ -11,7 +10,7 @@ const OptionsContainer = ({ children, title, desc, color, onPress }) => {
     <Animated.View entering={FadeInDown.springify()}>
       <Pressable
         style={{
-          borderRadius: 16,
+          borderRadius: 8,
           borderWidth: 1,
           borderColor: "#e3e3e3",
           flexDirection: "row",
@@ -30,7 +29,7 @@ const OptionsContainer = ({ children, title, desc, color, onPress }) => {
             backgroundColor: color,
             alignItems: "center",
             justifyContent: "center",
-            borderRadius: 12,
+            borderRadius: 8,
             paddingHorizontal: 13,
             paddingVertical: 15,
           }}

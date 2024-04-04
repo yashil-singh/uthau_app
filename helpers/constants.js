@@ -1,4 +1,5 @@
 const apiURL = "http://192.168.101.3:4000";
+const socketURL = "http://192.168.101.3:8000";
 
 const ERROR_MESSAGES = {
   REQUIRED: "This field is required.",
@@ -14,4 +15,4 @@ const REGEX = {
 
 const userRadius = 20;
 
-export { apiURL, REGEX, ERROR_MESSAGES, userRadius };
+export { apiURL, REGEX, ERROR_MESSAGES, userRadius, socketURL };

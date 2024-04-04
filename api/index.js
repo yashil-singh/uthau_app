@@ -12,6 +12,7 @@ const diaryRoute = require("./routes/diaryRoute");
 const exerciseRoute = require("./routes/exerciseRoute");
 const recipeRoute = require("./routes/recipeRoute");
 const usersRoute = require("./routes/usersRoute");
+const gymRoute = require("./routes/gymRoute");
 const { pool } = require("./dbConfig");
 
 // Middlewares
@@ -23,6 +24,7 @@ app.use("/diary", diaryRoute);
 app.use("/exercise", exerciseRoute);
 app.use("/recipe", recipeRoute);
 app.use("/users", usersRoute);
+app.use("/gym", gymRoute);
 
 app.listen(4000, () => {
   console.log("listening on port 4000");
@@ -60,8 +62,6 @@ io.on("connection", (socket) => {
         [user_id, id, message]
       );
 
-      console.log(users[id]);
-
       io.emit("receiveMessage", rows[0]);
 
       io.on("connect_error", (err) => {
@@ -89,7 +89,8 @@ app.get("/messages", async (req, res) => {
       `
     SELECT * FROM messages 
     WHERE (sender_id = $1 OR receiver_id = $1) 
-    AND (sender_id = $2 OR receiver_id = $2)`,
+    AND (sender_id = $2 OR receiver_id = $2)
+    ORDER BY sent_at DESC`,
       [sender_id, receiver_id]
     );
     return res.status(200).json(messages.rows);

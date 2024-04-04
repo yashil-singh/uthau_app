@@ -58,13 +58,12 @@ const register = () => {
   return (
     <SafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
       <KeyboardAwareScrollView
-        extraHeight={180}
-        enableOnAndroid={true}
         style={{
           flex: 1,
           paddingHorizontal: 25,
           backgroundColor: colors.white,
         }}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={{ gap: 25 }}>
           <View style={{ alignItems: "center", marginVertical: 25 }}>
