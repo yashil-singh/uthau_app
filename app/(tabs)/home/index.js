@@ -26,7 +26,6 @@ import useFood from "../../../hooks/useFood";
 
 const index = () => {
   const { user } = useAuthContext();
-  const { logout } = useLogout();
   const { getLoggedFood } = useFood();
 
   const [mealTotals, setMealTotals] = useState(null);

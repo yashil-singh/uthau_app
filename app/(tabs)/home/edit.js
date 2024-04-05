@@ -62,82 +62,87 @@ const edit = () => {
   const [uploading, setUploading] = useState(false);
   const [fileUri, setFileUri] = useState(null);
 
+  const [imageUrl, setImageUrl] = useState("");
+
   const onUploadImage = async () => {
     setUploading(true);
-    const image = getValues().image;
-    if (!fileUri) {
-      const { uri } = await FileSystem.getInfoAsync(image);
-      setFileUri(uri);
-      try {
-        const blob = await new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.onload = () => {
-            resolve(xhr.response);
-          };
-          xhr.onerror = (e) => {
-            reject(new TypeError("Network request failed."));
-          };
-          xhr.responseType = "blob";
-          xhr.open("GET", uri, true);
-          xhr.send(null);
-        });
+    // if (!fileUri) {
+    const { uri } = await FileSystem.getInfoAsync(imageUrl);
 
-        const filename = image.substring(image.lastIndexOf("/") + 1);
+    try {
+      const blob = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => {
+          resolve(xhr.response);
+        };
+        xhr.onerror = (e) => {
+          reject(new TypeError("Network request failed."));
+        };
+        xhr.responseType = "blob";
+        xhr.open("GET", uri, true);
+        xhr.send(null);
+      });
 
-        const storageRef = firebase.storage().ref();
-        const imageRef = storageRef.child(filename);
+      const filename = imageUrl.substring(imageUrl.lastIndexOf("/") + 1);
 
-        await imageRef.put(blob);
-        setUploading(false);
+      const storageRef = firebase.storage().ref();
+      const imageRef = storageRef.child(filename);
 
-        await getDownloadURL(imageRef).then((url) => {
-          setValue("image", url);
-        });
+      await imageRef.put(blob);
 
-        return imageRef;
-      } catch (error) {
-        console.log("🚀 ~ error uploading image:", error);
-        setUploading(false);
-        setOpenErrorModal(true);
-        setModalTitle("Error uploading image");
-        setErrorMessage("Please try again later.");
-      }
-    } else {
-      try {
-        const blob = await new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.onload = () => {
-            resolve(xhr.response);
-          };
-          xhr.onerror = (e) => {
-            reject(new TypeError("Network request failed."));
-          };
-          xhr.responseType = "blob";
-          xhr.open("GET", fileUri, true);
-          xhr.send(null);
-        });
+      const downloadURL = await getDownloadURL(imageRef);
 
-        const filename = image.substring(image.lastIndexOf("/") + 1);
+      console.log(getValues().image);
 
-        const storageRef = firebase.storage().ref();
-        const imageRef = storageRef.child(filename);
+      setValue("image", downloadURL);
 
-        await imageRef.put(blob);
-        setUploading(false);
+      console.log(getValues().image);
 
-        await getDownloadURL(imageRef).then((url) => {
-          setValue("image", url);
-        });
-
-        return imageRef;
-      } catch (error) {
-        console.log("🚀 ~ error uploading image:", error);
-        setUploading(false);
-        setOpenErrorModal(true);
-        setModalTitle("Error uploading image");
-        setErrorMessage("Please try again later.");
-      }
+      setUploading(false);
+      return imageRef;
+    } catch (error) {
+      console.log("🚀 ~ error uploading image:", error);
+      setUploading(false);
+      setOpenErrorModal(true);
+      setModalTitle("Error uploading image");
+      setErrorMessage("Please try again later.");
     }
+    // } else {
+    //   try {
+    //     const blob = await new Promise((resolve, reject) => {
+    //       const xhr = new XMLHttpRequest();
+    //       xhr.onload = () => {
+    //         resolve(xhr.response);
+    //       };
+    //       xhr.onerror = (e) => {
+    //         reject(new TypeError("Network request failed."));
+    //       };
+    //       xhr.responseType = "blob";
+    //       xhr.open("GET", fileUri, true);
+    //       xhr.send(null);
+    //     });
+
+    //     const filename = image.substring(image.lastIndexOf("/") + 1);
+
+    //     const storageRef = firebase.storage().ref();
+    //     const imageRef = storageRef.child(filename);
+
+    //     await imageRef.put(blob);
+    //     setUploading(false);
+
+    //     await getDownloadURL(imageRef).then((url) => {
+    //       setValue("image", url);
+    //     });
+
+    //     return imageRef;
+    //   } catch (error) {
+    //     console.log("🚀 ~ error uploading image:", error);
+    //     setUploading(false);
+    //     setOpenErrorModal(true);
+    //     setModalTitle("Error uploading image");
+    //     setErrorMessage("Please try again later.");
+    //   }
+    // }
   };
 
   const onPickImage = async () => {
@@ -153,8 +158,8 @@ const edit = () => {
     });
 
     if (!result.canceled) {
-      setValue("image", result.assets[0].uri);
       setIsImageChanged(true);
+      setImageUrl(result.assets[0].uri);
     }
   };
 
@@ -201,6 +206,7 @@ const edit = () => {
         calorie_intake: userData?.calorie_intake,
         image: userData?.image,
       });
+      setImageUrl(userData?.image);
       setDate(new Date(userData?.dob));
     } else {
       setOpenErrorModal(true);
@@ -250,20 +256,16 @@ const edit = () => {
   const onEdit = async (data) => {
     setIsDisabled(true);
     setIsLoading(true);
-    const {
-      name,
-      gender,
-      weight,
-      height,
-      dob,
-      calorie_burn,
-      calorie_intake,
-      image,
-    } = data;
+
     let imageRef;
     if (isImageChanged) {
       imageRef = await onUploadImage();
     }
+
+    const { name, gender, weight, height, dob, calorie_burn, calorie_intake } =
+      data;
+
+    const downloadImageUrl = getValues().image;
 
     const response = await updateUserProfile({
       user_id: userDetails?.user_id,
@@ -274,9 +276,8 @@ const edit = () => {
       dob,
       calorie_burn,
       calorie_intake,
-      image,
+      image: downloadImageUrl,
     });
-    console.log("🚀 ~ response:", response);
 
     if (response.success) {
       router.back();
@@ -324,7 +325,7 @@ const edit = () => {
               justifyContent: "center",
             }}
           >
-            <AccountContainer size={150} imageURI={getValues().image} />
+            <AccountContainer size={150} imageURI={imageUrl} />
             <Pressable onPress={onPickImage}>
               <BodyText
                 style={{ color: colors.info.normal, marginVertical: 15 }}
