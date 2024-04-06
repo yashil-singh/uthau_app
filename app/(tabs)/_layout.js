@@ -52,14 +52,14 @@ export default function _layout() {
           headerShown: false,
           tabBarIcon: ({ focused }) =>
             focused ? (
-              <Ionicons
-                name="ios-home-sharp"
+              <MaterialCommunityIcons
+                name="home"
                 size={24}
                 color={colors.primary.normal}
               />
             ) : (
-              <Ionicons
-                name="ios-home-outline"
+              <MaterialCommunityIcons
+                name="home-outline"
                 size={24}
                 color={colors.primary.normal}
               />

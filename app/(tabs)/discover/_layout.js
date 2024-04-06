@@ -39,6 +39,13 @@ export default function Layout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="ar"
+        options={{
+          headerTitle: "",
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

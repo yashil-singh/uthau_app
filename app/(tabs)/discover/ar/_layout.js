@@ -17,7 +17,7 @@ export default function Layout() {
       <Stack.Screen
         name="index"
         options={{
-          headerTitle: "AR Buddies",
+          headerTitle: "ARScan",
         }}
       />
     </Stack>

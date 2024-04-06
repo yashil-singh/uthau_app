@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Dimensions, Image, View } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import CircularProgress from "react-native-circular-progress-indicator";
-import steps from "../../../assets/images/steps.png";
+import stepsImage from "../../../assets/images/steps.png";
 import MainContainer from "../../../components/MainContainer";
 import Animated, { FadeInDown, FadeInLeft } from "react-native-reanimated";
 import {
@@ -23,10 +23,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLogout } from "../../../hooks/useLogout";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import useFood from "../../../hooks/useFood";
+import useHealthData from "../../../hooks/useHealthData";
 
 const index = () => {
   const { user } = useAuthContext();
   const { getLoggedFood } = useFood();
+  const { getAndroidData } = useHealthData();
 
   const [mealTotals, setMealTotals] = useState(null);
   const currentDate = dayjs();
@@ -71,6 +73,24 @@ const index = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const [calories, setCalories] = useState("");
+  const [steps, setSteps] = useState("");
+
+  useEffect(() => {
+    const fetchHealthData = async () => {
+      const values = await getAndroidData();
+      console.log("🚀 ~ values:", values);
+
+      if (!values.success) {
+        alert(values.message);
+      }
+      setCalories(values.totalCalories);
+      setSteps(values.totalSteps);
+    };
+
+    fetchHealthData();
+  }, []);
+
   const data = {
     labels: ["Jan", "Feb", "March", "April", "May", "June"],
     datasets: [
@@ -110,7 +130,6 @@ const index = () => {
             imageURI={currentUser?.image}
             onPress={() => router.push("/home/account")}
           />
-          <Ionicons name="ios-notifications" size={30} color="black" />
         </View>
 
         <MainContainer gap={25} padding={15}>
@@ -256,14 +275,14 @@ const index = () => {
               }}
             >
               <View style={{ alignItems: "flex-end" }}>
-                <Image source={steps} width={60} height={60} />
+                <Image source={stepsImage} width={60} height={60} />
               </View>
               <View>
                 <SubHeaderText style={{ color: colors.white, fontSize: 18 }}>
                   Steps
                 </SubHeaderText>
                 <HeaderText style={{ color: colors.white, fontSize: 32 }}>
-                  1,857
+                  {steps}
                 </HeaderText>
               </View>
             </Animated.View>
@@ -284,7 +303,7 @@ const index = () => {
                   Calories
                 </SubHeaderText>
                 <HeaderText style={{ color: colors.white, fontSize: 32 }}>
-                  530
+                  {calories}
                 </HeaderText>
               </View>
             </Animated.View>

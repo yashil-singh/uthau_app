@@ -22,7 +22,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yashilsingh.uthau"
+      "package": "com.yashilsingh.uthau",
+      "permissions": [
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_TOTAL_CALORIES_BURNED"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -41,7 +45,20 @@
           "locationAlwaysAndWhenInUsePermission": "Allow Uthau to use your location.",
           "locationWhenInUsePermission": "Allow Uthau to use your location."
         }
-      ]
+      ],
+      ["react-native-health-connect"],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 26
+          }
+        }
+      ],
+      "expo-font",
+      "expo-secure-store"
     ]
   }
 }

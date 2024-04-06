@@ -53,9 +53,9 @@ const index = () => {
           </OptionsContainer>
 
           <OptionsContainer
-            title="AR Buddies"
+            title="ARScan"
             color={colors.error.normal}
-            desc="Complete goals and find your AR buddies here."
+            desc="Complete goals and get points here."
             onPress={() => router.push("discover/ar")}
           >
             <MaterialIcons name="videogame-asset" size={35} color="white" />

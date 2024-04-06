@@ -1,4 +1,4 @@
-import { View, Text, Pressable, TextInput } from "react-native";
+import { View, Text, Pressable, TextInput, Platform } from "react-native";
 import React, { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import { BodyText } from "./StyledText";
