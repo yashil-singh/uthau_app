@@ -137,7 +137,7 @@ const account = () => {
               marginBottom: 20,
             }}
           >
-            <AccountContainer size={150} imageURI={userDetails?.image} />
+            <AccountContainer size={150} imageURI={userDetails?.image || ""} />
           </View>
           <View
             style={{
@@ -203,11 +203,11 @@ const account = () => {
             }}
           >
             <MaterialCommunityIcons
-              name="human-male-height"
+              name="weight-kilogram"
               size={24}
               color="black"
             />
-            <HeaderText>Height:</HeaderText>
+            <HeaderText>Weight:</HeaderText>
             <BodyText>{userDetails?.weight} kg</BodyText>
           </View>
 
@@ -220,7 +220,7 @@ const account = () => {
             }}
           >
             <MaterialCommunityIcons
-              name="weight-kilogram"
+              name="human-male-height"
               size={24}
               color="black"
             />

@@ -241,6 +241,24 @@ export const useUsers = () => {
     }
   };
 
+  const getUserEntries = async ({ user_id }) => {
+    try {
+      const response = await axios.get(`${apiURL}/gym/entries/${user_id}`);
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        entries: data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
   return {
     getUserDetail,
     updateUserProfile,
@@ -251,5 +269,6 @@ export const useUsers = () => {
     getUserRequestSent,
     sendRequest,
     acceptRequest,
+    getUserEntries,
   };
 };

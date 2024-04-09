@@ -294,6 +294,48 @@ router.delete("/announcement/:id/delete", async (req, res) => {
   }
 });
 
+router.get("/entries/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [id]
+    );
+
+    if (userCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const result = await pool.query(
+      `
+    SELECT f.* FROM comp_participants c 
+    JOIN fitness_competitions f ON f.fitness_competition_id = c.fitness_competition_id
+    JOIN payments p ON p.payment_id = c.payment_id
+    JOIN users u ON u.user_id = p.user_id
+    WHERE u.user_id = $1
+    AND LOWER(p.status) = LOWER('completed')
+    `,
+      [id]
+    );
+
+    const entries = result.rows;
+
+    return res.status(200).json(entries);
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
 // Endpoint to get all plans
 router.get("/plan", async (req, res) => {
   try {

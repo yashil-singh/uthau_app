@@ -13,6 +13,7 @@ const exerciseRoute = require("./routes/exerciseRoute");
 const recipeRoute = require("./routes/recipeRoute");
 const usersRoute = require("./routes/usersRoute");
 const gymRoute = require("./routes/gymRoute");
+const paymentRoute = require("./routes/paymentRoute");
 const { pool } = require("./dbConfig");
 
 // Middlewares
@@ -25,6 +26,7 @@ app.use("/exercise", exerciseRoute);
 app.use("/recipe", recipeRoute);
 app.use("/users", usersRoute);
 app.use("/gym", gymRoute);
+app.use("/payment", paymentRoute);
 
 app.listen(4000, () => {
   console.log("listening on port 4000");

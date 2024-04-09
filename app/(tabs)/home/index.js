@@ -6,7 +6,6 @@ import { LineChart } from "react-native-chart-kit";
 import CircularProgress from "react-native-circular-progress-indicator";
 import stepsImage from "../../../assets/images/steps.png";
 import MainContainer from "../../../components/MainContainer";
-import Animated, { FadeInDown, FadeInLeft } from "react-native-reanimated";
 import {
   BodyText,
   HeaderText,
@@ -32,6 +31,8 @@ const index = () => {
 
   const [mealTotals, setMealTotals] = useState(null);
   const currentDate = dayjs();
+
+  const [isHealthDataGranted, setIsHealthDataGranted] = useState(false);
 
   const decodedToken = decodeToken(user);
   const currentUser = decodedToken?.user;
@@ -82,10 +83,12 @@ const index = () => {
       console.log("🚀 ~ values:", values);
 
       if (!values.success) {
-        alert(values.message);
+        setIsHealthDataGranted(false);
+      } else {
+        setCalories(values.totalCalories);
+        setSteps(values.totalSteps);
+        setIsHealthDataGranted(true);
       }
-      setCalories(values.totalCalories);
-      setSteps(values.totalSteps);
     };
 
     fetchHealthData();
@@ -185,7 +188,7 @@ const index = () => {
           )} */}
 
           {/* Calories Container */}
-          <Animated.View entering={FadeInDown.delay(200).springify()}>
+          <View>
             <View
               style={{
                 padding: 15,
@@ -261,57 +264,121 @@ const index = () => {
                 </View>
               </View>
             </View>
-          </Animated.View>
+          </View>
           {/* Steps and Calories card */}
 
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <Animated.View
-              entering={FadeInLeft.delay(200).springify()}
-              style={{
-                backgroundColor: colors.secondary.normal,
-                flex: 1,
-                borderRadius: 10,
-                padding: 15,
-              }}
-            >
-              <View style={{ alignItems: "flex-end" }}>
-                <Image source={stepsImage} width={60} height={60} />
+          {isHealthDataGranted ? (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View
+                style={{
+                  backgroundColor: colors.secondary.normal,
+                  flex: 1,
+                  borderRadius: 10,
+                  padding: 15,
+                }}
+              >
+                <View style={{ alignItems: "flex-end" }}>
+                  <Image source={stepsImage} width={60} height={60} />
+                </View>
+                <View>
+                  <SubHeaderText style={{ color: colors.white, fontSize: 18 }}>
+                    Steps
+                  </SubHeaderText>
+                  <HeaderText style={{ color: colors.white, fontSize: 32 }}>
+                    {steps}
+                  </HeaderText>
+                </View>
               </View>
-              <View>
-                <SubHeaderText style={{ color: colors.white, fontSize: 18 }}>
-                  Steps
-                </SubHeaderText>
-                <HeaderText style={{ color: colors.white, fontSize: 32 }}>
-                  {steps}
-                </HeaderText>
+              <View
+                style={{
+                  backgroundColor: colors.warning.normal,
+                  flex: 1,
+                  borderRadius: 10,
+                  padding: 15,
+                }}
+              >
+                <View style={{ alignItems: "flex-end" }}>
+                  <FontAwesome5
+                    name="fire-alt"
+                    size={60}
+                    color={colors.white}
+                  />
+                </View>
+                <View>
+                  <SubHeaderText style={{ color: colors.white, fontSize: 18 }}>
+                    Calories
+                  </SubHeaderText>
+                  <HeaderText style={{ color: colors.white, fontSize: 32 }}>
+                    {calories}
+                  </HeaderText>
+                </View>
               </View>
-            </Animated.View>
-            <Animated.View
-              entering={FadeInLeft.delay(200).springify()}
-              style={{
-                backgroundColor: colors.warning.normal,
-                flex: 1,
-                borderRadius: 10,
-                padding: 15,
-              }}
-            >
-              <View style={{ alignItems: "flex-end" }}>
-                <FontAwesome5 name="fire-alt" size={60} color={colors.white} />
+            </View>
+          ) : (
+            <>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: colors.secondary.normal,
+                    flex: 1,
+                    borderRadius: 10,
+                    padding: 15,
+                    width: "100%",
+                  }}
+                >
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Image source={stepsImage} width={60} height={60} />
+                  </View>
+                  <View>
+                    <SubHeaderText
+                      style={{ color: colors.white, fontSize: 18 }}
+                    >
+                      Steps
+                    </SubHeaderText>
+                    <HeaderText style={{ color: colors.white }}>
+                      Connect to track steps
+                    </HeaderText>
+                  </View>
+                </View>
+                <View
+                  style={{
+                    backgroundColor: colors.warning.normal,
+                    flex: 1,
+                    borderRadius: 10,
+                    padding: 15,
+                    width: "100%",
+                  }}
+                >
+                  <View style={{ alignItems: "flex-end" }}>
+                    <FontAwesome5
+                      name="fire-alt"
+                      size={60}
+                      color={colors.white}
+                    />
+                  </View>
+                  <View>
+                    <SubHeaderText
+                      style={{ color: colors.white, fontSize: 18 }}
+                    >
+                      Calories
+                    </SubHeaderText>
+                    <HeaderText style={{ color: colors.white }}>
+                      Connect to track calories
+                    </HeaderText>
+                  </View>
+                </View>
               </View>
-              <View>
-                <SubHeaderText style={{ color: colors.white, fontSize: 18 }}>
-                  Calories
-                </SubHeaderText>
-                <HeaderText style={{ color: colors.white, fontSize: 32 }}>
-                  {calories}
-                </HeaderText>
-              </View>
-            </Animated.View>
-          </View>
+            </>
+          )}
+
           {/* Progress */}
 
-          <Animated.View
-            entering={FadeInDown.delay(200).springify()}
+          <View
             style={{
               borderWidth: 1,
               borderColor: "#e3e3e3",
@@ -342,7 +409,7 @@ const index = () => {
                 bezier
               />
             </View>
-          </Animated.View>
+          </View>
         </MainContainer>
       </KeyboardAwareScrollView>
     </SafeAreaView>

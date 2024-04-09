@@ -53,6 +53,15 @@ const index = () => {
           </OptionsContainer>
 
           <OptionsContainer
+            title="Fitness Competitons"
+            color={colors.warning.normal}
+            desc="Join fitness competitions now for a chance to win cash prizes or gifts."
+            onPress={() => router.push("discover/competition")}
+          >
+            <MaterialCommunityIcons name="medal" size={35} color="white" />
+          </OptionsContainer>
+
+          <OptionsContainer
             title="ARScan"
             color={colors.error.normal}
             desc="Complete goals and get points here."

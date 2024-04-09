@@ -10,7 +10,7 @@
   "author": "Yashil Lal Singh",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.6.3",
+    "axios": "^1.6.8",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.1",
@@ -19,6 +19,7 @@
     "nodemailer": "^6.9.7",
     "nodemon": "^3.0.2",
     "pg": "^8.11.3",
+    "request": "^2.88.2",
     "socket.io": "^4.7.5",
     "validator": "^13.11.0"
   }

@@ -76,7 +76,31 @@ const useGym = () => {
     }
   };
 
-  return { getMemberCode, getMemberById, getReportYears, getReport };
+  const getCompetitions = async () => {
+    try {
+      const resposne = await axios.get(`${apiURL}/gym/announcement`);
+
+      const data = resposne?.data;
+
+      return {
+        success: true,
+        announcements: data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  return {
+    getMemberCode,
+    getMemberById,
+    getReportYears,
+    getReport,
+    getCompetitions,
+  };
 };
 
 export default useGym;

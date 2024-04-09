@@ -1,5 +1,5 @@
-const apiURL = "http://192.168.101.9:4000";
-const socketURL = "http://192.168.101.9:8000";
+const apiURL = "http://192.168.101.2:4000";
+const socketURL = "http://192.168.101.2:8000";
 
 const ERROR_MESSAGES = {
   REQUIRED: "This field is required.",
