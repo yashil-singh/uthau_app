@@ -259,8 +259,128 @@ export const useUsers = () => {
     }
   };
 
+  const logWeight = async ({ user_id, weight, date }) => {
+    try {
+      const response = await axios.post(`${apiURL}/users/weight/log`, {
+        user_id,
+        weight,
+        date,
+      });
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const getWeightLogs = async ({ user_id, range }) => {
+    try {
+      const response = await axios.get(
+        `${apiURL}/users/weight/${user_id}/${range}`
+      );
+
+      return {
+        success: true,
+        logs: response?.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const logSteps = async ({ user_id, steps }) => {
+    try {
+      const response = await axios.post(`${apiURL}/users/steps/log`, {
+        user_id,
+        steps,
+      });
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const getStepLogs = async ({ user_id }) => {
+    try {
+      const response = await axios.get(`${apiURL}/users/steps/log/${user_id}`);
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        data: data,
+      };
+    } catch (error) {
+      console.log("🚀 ~ error:", error);
+
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const onArScan = async ({ user_id }) => {
+    try {
+      const response = await axios.post(`${apiURL}/users/ar/points`, {
+        user_id,
+      });
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const getArPoints = async ({ user_id }) => {
+    try {
+      const response = await axios.get(`${apiURL}/users/ar/points/${user_id}`);
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        totalPoints: data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
   return {
     getUserDetail,
+    logWeight,
     updateUserProfile,
     updateUserLocation,
     getAllFriends,
@@ -270,5 +390,10 @@ export const useUsers = () => {
     sendRequest,
     acceptRequest,
     getUserEntries,
+    getWeightLogs,
+    logSteps,
+    getStepLogs,
+    onArScan,
+    getArPoints,
   };
 };

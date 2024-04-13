@@ -33,12 +33,6 @@ export default function Layout() {
         }}
       />
       <Stack.Screen
-        name="nutrition"
-        options={{
-          headerTitle: "Nutrition",
-        }}
-      />
-      <Stack.Screen
         name="exercises"
         options={{
           headerTitle: "Exercises",

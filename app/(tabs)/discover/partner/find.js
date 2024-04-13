@@ -21,9 +21,11 @@ import decodeToken from "../../../../helpers/decodeToken";
 import ErrorModal from "../../../../components/ErrorModal";
 import { useRouter } from "expo-router";
 import { colors } from "../../../../helpers/theme";
-import { TouchableRipple } from "react-native-paper";
+import { Snackbar, TouchableRipple } from "react-native-paper";
 import { AntDesign } from "@expo/vector-icons";
 import { Feather } from "@expo/vector-icons";
+import useDecode from "../../../../hooks/useDecode";
+import Portal from "react-native-paper/src/components/Portal/Portal";
 
 const find = () => {
   const router = useRouter();
@@ -34,9 +36,24 @@ const find = () => {
   const [location, setLocation] = useState(null);
 
   const { user } = useAuthContext();
-  const decodedToken = decodeToken(user);
-  const currentUser = decodedToken?.user;
-  const user_id = currentUser?.user_id;
+  const { getDecodedToken } = useDecode();
+
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
+
+      if (response.success) {
+        setCurrentUser(response?.user);
+        setIsPageLoading(false);
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
 
   const [nearbyUsers, setNearbyUsers] = useState([]);
   const [requestSent, setRequestSent] = useState([]);
@@ -49,67 +66,74 @@ const find = () => {
     useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
 
-  const onSendRequest = async ({ sender_id, receiver_id }) => {
-    const response = await sendRequest({ sender_id, receiver_id });
+  const [openToast, setOpenToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
-    if (response.success) {
-      console.log("SUCCESS");
-    } else {
-      console.log("FAIL");
+  const onSendRequest = async ({ sender_id, receiver_id }) => {
+    if (currentUser) {
+      const response = await sendRequest({ sender_id, receiver_id });
+      console.log("🚀 ~ response:", response);
+
+      setOpenToast(true);
+      setToastMessage(response.message);
+
+      if (response.success) {
+        getNearByUsers();
+      }
     }
   };
 
   useEffect(() => {
     const fetch = async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (currentUser) {
+        let { status } = await Location.requestForegroundPermissionsAsync();
 
-      if (status !== "granted") {
-        setOpenPermissionErrorModal(true);
-        return;
+        if (status !== "granted") {
+          setOpenPermissionErrorModal(true);
+          return;
+        }
+        let location = await Location.getCurrentPositionAsync({});
+
+        setLocation(location);
+
+        setIsLoading(true);
+
+        const response = await updateUserLocation({
+          lat: location.coords.latitude,
+          lng: location.coords.longitude,
+          user_id: currentUser.user_id,
+        });
+
+        if (!response.success) {
+          setOpenErrorModal(true);
+          setErrorMessage(response.message);
+        }
+
+        const requestSentResponse = await getUserRequestSent({
+          user_id: currentUser?.user_id,
+        });
+
+        if (requestSentResponse.success) {
+          setRequestSent(requestSentResponse.requests);
+        }
+
+        const nearbyUsersResponse = await getNearByUsers({
+          lat: location.coords.latitude,
+          lng: location.coords.longitude,
+          radius: 20,
+          user_id: currentUser?.user_id,
+        });
+
+        if (nearbyUsersResponse.success) {
+          setNearbyUsers(nearbyUsersResponse.nearbyUsers);
+        }
+
+        setIsLoading(false);
       }
-      let location = await Location.getCurrentPositionAsync({});
-
-      setLocation(location);
-
-      setIsLoading(true);
-
-      const response = await updateUserLocation({
-        lat: location.coords.latitude,
-        lng: location.coords.longitude,
-        user_id: user_id,
-      });
-
-      if (!response.success) {
-        setOpenErrorModal(true);
-        setErrorMessage(response.message);
-      }
-
-      const requestSentResponse = await getUserRequestSent({
-        user_id,
-      });
-
-      if (requestSentResponse.success) {
-        setRequestSent(requestSentResponse.requests);
-      }
-
-      const nearbyUsersResponse = await getNearByUsers({
-        lat: location.coords.latitude,
-        lng: location.coords.longitude,
-        radius: 20,
-        user_id: user_id,
-      });
-
-      console.log("🚀 ~ nearbyUsersResponse:", nearbyUsersResponse);
-
-      if (nearbyUsersResponse.success) {
-        setNearbyUsers(nearbyUsersResponse.nearbyUsers);
-      }
-
-      setIsLoading(false);
     };
 
     fetch();
-  }, [user]);
+  }, [user, currentUser, openToast]);
 
   return (
     <MainContainer padding={15}>
@@ -126,6 +150,23 @@ const find = () => {
           router.replace("discover");
         }}
       />
+
+      <Portal>
+        <Snackbar
+          visible={openToast}
+          onDismiss={() => setOpenToast(false)}
+          action={{
+            label: "close",
+            labelStyle: {
+              color: colors.primary.normal,
+            },
+          }}
+          duration={2000}
+          style={{ backgroundColor: colors.white }}
+        >
+          <BodyText>{toastMessage}</BodyText>
+        </Snackbar>
+      </Portal>
 
       <ErrorModal
         openErrorModal={openErrorModal}
@@ -213,7 +254,7 @@ const find = () => {
                     style={{ borderRadius: 100, padding: 5 }}
                     onPress={() =>
                       onSendRequest({
-                        sender_id: user_id,
+                        sender_id: currentUser?.user_id,
                         receiver_id: item.item.user_id,
                       })
                     }

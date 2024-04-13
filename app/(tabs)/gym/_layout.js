@@ -32,6 +32,12 @@ export default function Layout() {
           headerTitle: "Member Code",
         }}
       />
+      <Stack.Screen
+        name="payment"
+        options={{
+          headerTitle: "Membership Payment",
+        }}
+      />
     </Stack>
   );
 }

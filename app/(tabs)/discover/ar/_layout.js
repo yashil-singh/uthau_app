@@ -20,6 +20,13 @@ export default function Layout() {
           headerTitle: "ARScan",
         }}
       />
+      <Stack.Screen
+        name="camera"
+        options={{
+          headerTitle: "Find",
+          navigationBarHidden: true,
+        }}
+      />
     </Stack>
   );
 }

@@ -16,6 +16,8 @@ const InputFields = ({
   errorText,
   textStyle,
   isEditable,
+  isMultiline,
+  numberOfLines,
 }) => {
   const [isSecure, setIsSecure] = useState(isPassword);
   const [isFocused, setIsFocused] = useState(false);
@@ -43,8 +45,9 @@ const InputFields = ({
           style={{
             paddingVertical: Platform.OS === "ios" ? 15 : 10,
             fontSize: 14,
-            color: colors.gray,
             flex: 1,
+            color: colors.gray,
+            textAlignVertical: "top",
           }}
           placeholder={placeholder}
           secureTextEntry={isSecure}
@@ -60,6 +63,8 @@ const InputFields = ({
           onBlur={() => setIsFocused(false)}
           onFocus={() => setIsFocused(true)}
           editable={isEditable}
+          multiline={isMultiline || false}
+          numberOfLines={numberOfLines || 1}
         />
         <Pressable onPress={() => setIsSecure(!isSecure)}>
           {isPassword &&

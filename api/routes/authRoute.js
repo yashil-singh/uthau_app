@@ -5,7 +5,7 @@ const nodemailer = require("nodemailer");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const validator = require("validator");
-
+const strictVerifyToken = require("../helpers/strictVerification");
 const { pool } = require("../dbConfig");
 
 // Function to send mail
@@ -108,6 +108,7 @@ router.post("/login", async (req, res) => {
   try {
     // Retrieve the body of the request
     const { email, password } = req.body;
+    console.log("🚀 ~ req.body:", req.body);
 
     if (!email) {
       return res
@@ -647,6 +648,17 @@ router.post("/change-password", async (req, res) => {
     return res
       .status(500)
       .json({ message: "Internal Server Error. Try again later." });
+  }
+});
+
+router.get("/decode", strictVerifyToken, async (req, res) => {
+  try {
+    return res.status(200).json(req.decoded);
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
   }
 });
 

@@ -1,14 +1,6 @@
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import React, { memo, useState } from "react";
+import { Image, Pressable, View } from "react-native";
+import React from "react";
 import { FontAwesome } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { colors } from "../helpers/theme";
 import { BodyText, HeaderText } from "./StyledText";
 import formatWord from "../helpers/formatWord";
@@ -29,8 +21,7 @@ const CardOption = ({
   const formattedTarget = formatWord(target);
 
   return (
-    <Animated.View
-      entering={FadeInDown.springify()}
+    <View
       style={{
         ...style,
         borderRadius: 16,
@@ -129,7 +120,7 @@ const CardOption = ({
           </TouchableRipple>
         )}
       </View>
-    </Animated.View>
+    </View>
   );
 };
 

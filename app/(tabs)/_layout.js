@@ -2,31 +2,47 @@ import { Tabs, useFocusEffect, useNavigation, useRouter } from "expo-router";
 import { colors } from "../../helpers/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthContext } from "../../hooks/useAuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import decodeToken from "../../helpers/decodeToken";
+import useDecode from "../../hooks/useDecode";
 
 export default function _layout() {
   const { user } = useAuthContext();
-  const decodedToken = decodeToken(user);
-  const userDetails = decodedToken?.user;
-  const email = user?.email;
-  const navigation = useNavigation();
+  const { getDecodedToken } = useDecode();
 
   useFocusEffect(() => {
     if (!user) {
       navigation.navigate("(auth)", { screen: "login" });
-    } else {
-      if (!userDetails?.isverified) {
-        navigation.navigate("(verification)", {
-          screen: "emailVerification",
-          params: {
-            email: email,
-          },
-        });
-      }
     }
   });
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      if (!user) {
+        navigation.navigate("(auth)", { screen: "login" });
+      } else {
+        const response = await getDecodedToken();
+        if (response.success) {
+          const currentUser = response.user;
+
+          if (!currentUser.isverified) {
+            navigation.navigate("(verification)", {
+              screen: "emailVerification",
+              params: {
+                email: currentUser?.email,
+              },
+            });
+          }
+        } else {
+          navigation.navigate("(auth)", { screen: "login" });
+        }
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
+
+  const navigation = useNavigation();
 
   return (
     <Tabs

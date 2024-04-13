@@ -5,6 +5,7 @@ import {
   Pressable,
   TouchableOpacity,
   Modal,
+  Dimensions,
 } from "react-native";
 import React from "react";
 import useGym from "../../../hooks/useGym";
@@ -18,7 +19,12 @@ import {
   SubHeaderText,
 } from "../../../components/StyledText";
 import { colors } from "../../../helpers/theme";
-import { ActivityIndicator, TouchableRipple } from "react-native-paper";
+import {
+  ActivityIndicator,
+  Portal,
+  Snackbar,
+  TouchableRipple,
+} from "react-native-paper";
 import {
   MaterialCommunityIcons,
   MaterialIcons,
@@ -34,15 +40,27 @@ import StyledButton from "../../../components/StyledButton";
 import PaymentView from "../../../components/PaymentView";
 import usePay from "../../../hooks/usePay";
 import { useAuthContext } from "../../../hooks/useAuthContext";
-import decodeToken from "../../../helpers/decodeToken";
 import { useUsers } from "../../../hooks/useUsers";
+import useDecode from "../../../hooks/useDecode";
 const competition = () => {
   const { user } = useAuthContext();
-  const decodedToken = decodeToken(user);
-  const userDetails = decodedToken?.user;
+  const { getDecodedToken } = useDecode();
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
+
+      if (response.success) {
+        setCurrentUser(response?.user);
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
   const { getCompetitions } = useGym();
   const { getUserEntries } = useUsers();
-  const { onInitializePay } = usePay();
+  const { onInitializePay, onPayCompetitionEntry } = usePay();
   const [competitions, setCompetitions] = useState([]);
   const [activeCompetitions, setActiveCompetitions] = useState([]);
   const [expiredCompetitions, setExpiredCompetitions] = useState([]);
@@ -111,27 +129,62 @@ const competition = () => {
     setIsLoading(false);
   };
 
-  const onPay = async ({ user_id, order_name, amount }) => {
-    const response = await onInitializePay({ user_id, order_name, amount });
-    console.log("🚀 ~ response:", response);
+  const [openToast, setOpenToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
-    if (response.success) {
-      setUri(response?.uri);
-    }
-  };
+  const [isPayLodaing, setIsPayLodaing] = useState(false);
 
-  const hasUserEntered = ({ id }) =>
-    userEntries.some((item) => item.fitness_competition_id === id);
+  const onPay = async ({
+    fitness_competition_id,
+    user_id,
+    order_name,
+    amount,
+  }) => {
+    setIsLoading(true);
 
-  const fetchUserEntries = async () => {
-    const response = await getUserEntries({ user_id: userDetails?.user_id });
+    const initialize = await onPayCompetitionEntry({
+      amount,
+      fitness_competition_id,
+      order_name,
+      user_id,
+    });
 
-    if (response.success) {
-      setuserEntries(response.entries);
+    if (initialize.success) {
+      const order_id = initialize.order_id;
+
+      const response = await onInitializePay({ order_id });
+
+      if (response.success) {
+        setUri(response?.uri);
+      } else {
+        setOpenErrorModal(true);
+        setErrorMessage(response.message);
+        setModalTitle("Error processing payment");
+      }
     } else {
       setOpenErrorModal(true);
-      setErrorMessage(response.message);
-      setModalTitle("Error");
+      setErrorMessage(initialize.message);
+      setModalTitle("Error initializing payment");
+    }
+
+    setIsLoading(false);
+  };
+
+  const hasUserEntered = ({ id }) => {
+    return userEntries.some((item) => item.fitness_competition_id === id);
+  };
+
+  const fetchUserEntries = async () => {
+    if (currentUser) {
+      const response = await getUserEntries({ user_id: currentUser?.user_id });
+
+      if (response.success) {
+        setuserEntries(response.entries);
+      } else {
+        setOpenErrorModal(true);
+        setErrorMessage(response.message);
+        setModalTitle("Error");
+      }
     }
   };
 
@@ -144,7 +197,7 @@ const competition = () => {
   useEffect(() => {
     fetchCompetitions();
     fetchUserEntries();
-  }, []);
+  }, [currentUser, openPaymentModal]);
   return (
     <MainContainer padding={15}>
       <ErrorModal
@@ -165,10 +218,12 @@ const competition = () => {
         onDismiss={() => {
           setOpenDetailsModal(false);
           setSelectedAnnouncement({});
+          setToastMessage("");
         }}
         onRequestClose={() => {
           setOpenDetailsModal(false);
           setSelectedAnnouncement({});
+          setToastMessage("");
         }}
       >
         <View style={{ flex: 1, backgroundColor: colors.white, padding: 15 }}>
@@ -180,6 +235,7 @@ const competition = () => {
             }}
           >
             <TouchableRipple
+              borderless
               style={{
                 borderRadius: 100,
                 padding: 5,
@@ -300,10 +356,16 @@ const competition = () => {
                 </View>
               </View>
             </View>
+            <BodyText
+              style={{ textAlign: "center", color: colors.error.normal }}
+            >
+              {toastMessage}
+            </BodyText>
             <StyledButton
               isDisabled={hasUserEntered({
                 id: selectedAnnouncement?.fitness_competition_id,
               })}
+              isLoading={isPayLodaing}
               style={{ alignSelf: "flex-end" }}
               title={
                 hasUserEntered({
@@ -318,12 +380,30 @@ const competition = () => {
                 onPay({
                   amount: selectedAnnouncement?.entry_fee,
                   order_name: selectedAnnouncement?.title,
-                  user_id: userDetails?.user_id,
+                  user_id: currentUser?.user_id,
+                  fitness_competition_id:
+                    selectedAnnouncement?.fitness_competition_id,
                 })
               }
             ></StyledButton>
           </View>
         </View>
+        <Portal>
+          <Snackbar
+            visible={openToast}
+            onDismiss={() => setOpenToast(false)}
+            action={{
+              label: "close",
+              labelStyle: {
+                color: colors.primary.normal,
+              },
+            }}
+            duration={2000}
+            style={{ backgroundColor: colors.white }}
+          >
+            <BodyText>{toastMessage}</BodyText>
+          </Snackbar>
+        </Portal>
       </Modal>
       <Modal animationType="slide" visible={openPaymentModal}>
         <PaymentView
@@ -332,6 +412,10 @@ const competition = () => {
             setUri(null);
             setOpenPaymentModal(false);
             fetchUserEntries();
+          }}
+          onPaymentSuccess={() => {
+            setOpenPaymentModal(false);
+            setUri(null);
           }}
         />
       </Modal>
@@ -350,12 +434,17 @@ const competition = () => {
                 filter: "active",
                 competitionsToFilter: competitions,
               })}
+              style={{
+                maxHeight: 400,
+                gap: 15,
+              }}
               renderItem={(comp) => (
                 <TouchableOpacity
                   activeOpacity={0.9}
                   onPress={() => {
                     setOpenDetailsModal(true);
                     setSelectedAnnouncement(comp.item);
+                    setToastMessage("");
                   }}
                   key={comp.index}
                   style={{
@@ -395,7 +484,7 @@ const competition = () => {
                     </BodyText>
                     <Feather name="calendar" size={20} color={colors.gray} />
                     <BodyText style={{ color: colors.gray }}>
-                      {format(new Date(comp.item.start_date), "d MMM yyy")}
+                      {format(new Date(comp.item.start_date), "do MMM yyy")}
                     </BodyText>
                   </View>
                   <BodyText
@@ -416,7 +505,7 @@ const competition = () => {
                     Posted:{" "}
                     {format(
                       new Date(comp.item.posted_date),
-                      "d MMMM yyyy, hh:mm a"
+                      "do MMMM yyyy, hh:mm a"
                     )}
                   </BodyText>
                 </TouchableOpacity>
@@ -437,6 +526,7 @@ const competition = () => {
               </BodyText>
             </View>
           )}
+
           <Pressable
             style={{
               flexDirection: "row",
@@ -464,6 +554,7 @@ const competition = () => {
           </Pressable>
           {showExpired && (
             <FlatList
+              horizontal
               data={expiredCompetitions}
               renderItem={(comp) => (
                 <View
@@ -473,7 +564,9 @@ const competition = () => {
                     borderColor: colors.lightGray,
                     borderRadius: 6,
                     padding: 10,
-                    marginBottom: 10,
+                    width: Dimensions.get("window").width - 100,
+                    maxWidth: Dimensions.get("window").width - 100,
+                    marginRight: 10,
                   }}
                 >
                   <HeaderText>{comp.item.title}</HeaderText>

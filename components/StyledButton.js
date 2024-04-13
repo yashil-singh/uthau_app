@@ -29,6 +29,7 @@ const StyledButton = ({
         alignItems: "center",
         justifyContent: "center",
         gap: 5,
+        minHeight: 15,
         ...style,
       }}
       onPress={onPress}

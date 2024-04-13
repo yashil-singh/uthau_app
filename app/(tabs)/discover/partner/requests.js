@@ -20,14 +20,30 @@ import MainContainer from "../../../../components/MainContainer";
 import { AntDesign } from "@expo/vector-icons";
 import { TouchableRipple } from "react-native-paper";
 import { userRadius } from "../../../../helpers/constants";
+import useDecode from "../../../../hooks/useDecode";
 
 const requests = () => {
   const { user } = useAuthContext();
   const { getUserRequestReceived, acceptRequest } = useUsers();
 
-  const decodedToken = decodeToken(user);
-  const currentUser = decodedToken?.user;
-  const user_id = currentUser?.user_id;
+  const { getDecodedToken } = useDecode();
+
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
+
+      if (response.success) {
+        setCurrentUser(response?.user);
+        setIsPageLoading(false);
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
 
   const [requests, setRequests] = useState([]);
   const [location, setLocation] = useState(null);
@@ -55,18 +71,20 @@ const requests = () => {
 
   useEffect(() => {
     const getRequests = async () => {
-      const lat = location?.coords.latitude;
-      const lng = location?.coords.longitude;
-      const radius = userRadius;
-      const response = await getUserRequestReceived({
-        user_id,
-        lat,
-        lng,
-        radius,
-      });
+      if (currentUser) {
+        const lat = location?.coords.latitude;
+        const lng = location?.coords.longitude;
+        const radius = userRadius;
+        const response = await getUserRequestReceived({
+          user_id: currentUser?.user_id,
+          lat,
+          lng,
+          radius,
+        });
 
-      if (response.success) {
-        setRequests(response.requests);
+        if (response.success) {
+          setRequests(response.requests);
+        }
       }
     };
 
@@ -140,7 +158,7 @@ const requests = () => {
                   style={{ borderRadius: 100, padding: 5 }}
                   onPress={() =>
                     onRequestAccept({
-                      receiver_id: user_id,
+                      receiver_id: currentUser?.user_id,
                       sender_id: item.item.user_id,
                     })
                   }
@@ -160,7 +178,7 @@ const requests = () => {
           style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
         >
           <HeaderText style={{ fontSize: 18, textAlign: "center" }}>
-            Ops! It's a bit empty here!
+            Oops! It's a bit empty here!
           </HeaderText>
           <BodyText style={{ color: colors.gray, textAlign: "center" }}>
             You have no pending requests at the moment.

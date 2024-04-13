@@ -41,17 +41,26 @@ const useHealthData = () => {
         endTime: endTime,
       };
 
-      let caloriesResult;
+      let caloriesResult = [];
       let stepsResult;
+      let activeCalories;
       try {
-        caloriesResult = await readRecords("TotalCaloriesBurned", {
+        // caloriesResult = await readRecords("TotalCaloriesBurned", {
+        //   timeRangeFilter: timeRangeFilter,
+        // });
+        // console.log("🚀 ~ caloriesResult:", caloriesResult);
+
+        activeCalories = await readRecords("ActiveCaloriesBurned", {
           timeRangeFilter: timeRangeFilter,
         });
+        console.log("🚀 ~ activeCalories:", activeCalories);
 
         stepsResult = await readRecords("Steps", {
           timeRangeFilter: timeRangeFilter,
         });
       } catch (error) {
+        console.log("🚀 ~ error:", error);
+
         return {
           success: false,
           title: "Permission Required",
@@ -62,7 +71,7 @@ const useHealthData = () => {
       const totalSteps = stepsResult
         .reduce((sum, curr) => sum + curr.count, 0)
         .toFixed();
-      const totalCalories = caloriesResult
+      const totalCalories = activeCalories
         .reduce((sum, curr) => sum + curr.energy.inKilocalories, 0)
         .toFixed();
 

@@ -26,13 +26,26 @@ import { useAuthContext } from "../../../../../hooks/useAuthContext";
 import decodeToken from "../../../../../helpers/decodeToken";
 import { apiURL, socketURL } from "../../../../../helpers/constants";
 import axios from "axios";
+import useDecode from "../../../../../hooks/useDecode";
 
 const chat = () => {
   const { id } = useLocalSearchParams();
   const { user } = useAuthContext();
-  const decodedToken = decodeToken(user);
-  const currentUser = decodedToken?.user;
-  const user_id = currentUser?.user_id;
+  const { getDecodedToken } = useDecode();
+
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
+
+      if (response.success) {
+        setCurrentUser(response?.user);
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
 
   const router = useRouter();
   const { getUserDetail } = useUsers();
@@ -63,7 +76,11 @@ const chat = () => {
   const sendMessage = async () => {
     setIsMessageSending(true);
     if (message.trim() !== "") {
-      socket.emit("sendMessage", { user_id, id, message });
+      socket.emit("sendMessage", {
+        user_id: currentUser?.user_id,
+        id,
+        message,
+      });
       setMessage("");
     }
 
@@ -125,28 +142,31 @@ const chat = () => {
   }, [id]);
 
   const fetchMessages = async () => {
-    try {
-      const sender_id = user_id;
-      const receiver_id = id;
+    console.log("🚀 ~ currentUser:", currentUser);
+    if (currentUser) {
+      try {
+        const sender_id = currentUser?.user_id;
+        const receiver_id = id;
 
-      const response = await axios.get(`${apiURL}/messages`, {
-        params: {
-          sender_id,
-          receiver_id,
-        },
-      });
+        const response = await axios.get(`${apiURL}/messages`, {
+          params: {
+            sender_id,
+            receiver_id,
+          },
+        });
 
-      setMessages(response?.data);
-    } catch (error) {
-      console.log("🚀 ~ [id].js useEffect error:", error);
+        setMessages(response?.data);
+      } catch (error) {
+        console.log("🚀 ~ [id].js useEffect error:", error);
+      }
+
+      setIsMessageLoading(false);
     }
-
-    setIsMessageLoading(false);
   };
 
   useEffect(() => {
     fetchMessages();
-  }, []);
+  }, [currentUser]);
 
   const formatTime = (time) => {
     const options = { hour: "numeric", minute: "numeric" };
@@ -167,7 +187,7 @@ const chat = () => {
         >
           <ActivityIndicator size={"large"} color={colors.primary.normal} />
         </View>
-      ) : messages.length <= 0 ? (
+      ) : !isMessageLoading && messages.length <= 0 ? (
         <View
           style={{
             flex: 1,
@@ -189,7 +209,7 @@ const chat = () => {
             <Pressable
               key={index}
               style={[
-                item?.sender_id === user_id
+                item?.sender_id === currentUser?.user_id
                   ? {
                       alignSelf: "flex-end",
                       backgroundColor: colors.primary.normal,

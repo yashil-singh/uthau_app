@@ -2,18 +2,37 @@ import { View, Text } from "react-native";
 import React from "react";
 import axios from "axios";
 import { apiURL } from "../helpers/constants";
+import { useAuthContext } from "./useAuthContext";
+import * as SecureStore from "expo-secure-store";
 
 const useGym = () => {
-  const getMemberCode = async ({ user_id }) => {
+  const { dispatch } = useAuthContext();
+  const requestMembership = async ({ email, code }) => {
     try {
-      const response = await axios.get(`${apiURL}/gym/member/code/${user_id}`);
-      const code = response?.data;
+      const response = await axios.post(
+        `${apiURL}/gym/member/convert/request`,
+        {
+          email,
+          code,
+        }
+      );
+      const data = response?.data;
+
+      const storedToken = await SecureStore.getItemAsync("authToken");
+
+      if (storedToken) {
+        await SecureStore.setItemAsync("authToken", JSON.stringify(data));
+      }
+
+      dispatch({ type: "LOGIN", payload: data });
 
       return {
         success: true,
-        code: code,
+        message: data.message,
       };
     } catch (error) {
+      console.log("🚀 ~ error:", error);
+
       return {
         success: false,
         message: error.response?.data.message,
@@ -32,6 +51,12 @@ const useGym = () => {
         member: data,
       };
     } catch (error) {
+      if (error.response?.status === 404) {
+        return {
+          success: true,
+          member: null,
+        };
+      }
       return {
         success: false,
         message: error.response?.data.message,
@@ -94,12 +119,126 @@ const useGym = () => {
     }
   };
 
+  const getPlans = async () => {
+    try {
+      const response = await axios.get(`${apiURL}/gym/plan`);
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        plans: data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const onActivateMembership = async ({ code, user_id }) => {
+    try {
+      const resposne = await axios.post(`${apiURL}/gym/member/activate`, {
+        code,
+        user_id,
+      });
+
+      const data = resposne.data;
+      const token = data.token;
+
+      const storedToken = await SecureStore.getItemAsync("authToken");
+
+      if (storedToken) {
+        await SecureStore.setItemAsync("authToken", JSON.stringify(data));
+      }
+
+      dispatch({ type: "LOGOUT" });
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const getTrainerAssignments = async ({ user_id }) => {
+    try {
+      const response = await axios.get(
+        `${apiURL}/gym/trainer/students/${user_id}`
+      );
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        data: data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const getMetrics = async () => {
+    try {
+      const response = await axios.get(`${apiURL}/gym/metrics`);
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        data: data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const onEvaluateMember = async ({ trainer_id, member_id, grades, note }) => {
+    try {
+      const response = await axios.post(`${apiURL}/gym/trainer/evaluate`, {
+        trainer_id,
+        member_id,
+        grades,
+        note,
+      });
+
+      const data = response.data;
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
   return {
-    getMemberCode,
+    requestMembership,
     getMemberById,
     getReportYears,
     getReport,
     getCompetitions,
+    getPlans,
+    onActivateMembership,
+    getTrainerAssignments,
+    getMetrics,
+    onEvaluateMember,
   };
 };
 

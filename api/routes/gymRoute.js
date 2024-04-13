@@ -3,6 +3,7 @@ const { pool } = require("../dbConfig");
 const router = express.Router();
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -110,11 +111,20 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 // Endpoint to get all announcements
 router.get("/announcement", async (req, res) => {
   try {
-    const result =
-      await pool.query(`SELECT f.*, COUNT(c.fitness_competition_id) AS entries  FROM fitness_competitions f
-        LEFT JOIN comp_participants c ON c.fitness_competition_id = f.fitness_competition_id
-        GROUP BY f.fitness_competition_id, c.fitness_competition_id
-        ORDER BY f.posted_date DESC`);
+    const result = await pool.query(`SELECT 
+      fc.*,
+      COUNT(p.payment_id) AS entries
+  FROM 
+      fitness_competitions fc
+  LEFT JOIN 
+      comp_participants cp ON fc.fitness_competition_id = cp.fitness_competition_id
+  LEFT JOIN 
+      payments p ON cp.payment_id = p.payment_id AND p.status = 'Completed'
+  
+  GROUP BY 
+      fc.fitness_competition_id
+  ORDER BY
+    posted_date DESC`);
 
     const announcements = result.rows.map((announcement) => {
       // Format the start_date and entry_deadline here
@@ -148,10 +158,20 @@ router.get("/announcement/:id", async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT f.*, COUNT(c.fitness_competition_id) AS entries  FROM fitness_competitions f
-            LEFT JOIN comp_participants c ON c.fitness_competition_id = f.fitness_competition_id
-            WHERE f.fitness_competition_id = $1
-            GROUP BY f.fitness_competition_id, c.fitness_competition_id`,
+      `SELECT 
+      fc.*,
+      COUNT(p.payment_id) AS entries
+  FROM 
+      fitness_competitions fc
+  LEFT JOIN 
+      comp_participants cp ON fc.fitness_competition_id = cp.fitness_competition_id
+  LEFT JOIN 
+      payments p ON cp.payment_id = p.payment_id AND p.status = 'Completed'
+      WHERE fc.fitness_competition_id = $1
+  GROUP BY 
+      fc.fitness_competition_id
+  ORDER BY
+    posted_date DESC`,
       [id]
     );
 
@@ -244,7 +264,6 @@ router.post("/announcement/:id/update", async (req, res) => {
 router.delete("/announcement/:id/delete", async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("🚀 ~ id:", id);
 
     if (!id) {
       return res
@@ -622,9 +641,9 @@ router.post("/member/create", async (req, res) => {
   }
 });
 
-router.post("/member/convert/check", async (req, res) => {
+router.post("/member/convert/request", async (req, res) => {
   try {
-    const { email, code, plan_id } = req.body;
+    const { email, code } = req.body;
 
     const userCheck = await pool.query(`SELECT * FROM users WHERE email = $1`, [
       email,
@@ -638,13 +657,6 @@ router.post("/member/convert/check", async (req, res) => {
 
     const user = userCheck.rows[0];
     const user_id = user.user_id;
-    const member_code = user.member_code;
-
-    if (member_code !== code) {
-      return res.status(400).json({
-        message: "The provided member code was incorrect. Try again.",
-      });
-    }
 
     const memberCheck = await pool.query(
       `SELECT * FROM members WHERE user_id = $1`,
@@ -657,24 +669,24 @@ router.post("/member/convert/check", async (req, res) => {
         .json({ message: "The requested user is already a member." });
     }
 
-    const planCheck = await pool.query(
-      `SELECT * FROM plans WHERE plan_id = $1`,
-      [plan_id]
-    );
+    const member_code = user.member_code;
 
-    if (planCheck.rowCount <= 0) {
-      return res
-        .status(404)
-        .json({ message: "The requested plan was not found." });
+    if (member_code !== code) {
+      return res.status(400).json({
+        message: "The provided member code was incorrect. Try again.",
+      });
     }
 
-    const selectedPlan = planCheck.rows[0];
-    const amount = selectedPlan.amount;
+    const result = await pool.query(
+      `UPDATE users SET role = 'member' WHERE user_id = $1 AND email = $2 RETURNING *`,
+      [user_id, email]
+    );
+
+    const convertedUser = result.rows[0];
+
     return res.status(200).json({
-      message: "All user details are valid.",
-      amount: amount,
-      plan_id: plan_id,
-      user_id: user_id,
+      message: "Membership claimed successfully.",
+      user: convertedUser,
     });
   } catch (error) {
     console.log("🚀 ~ gymRoute.js /member/convert error:", error);
@@ -735,6 +747,32 @@ router.post("/member/convert", async (req, res) => {
       [expiry_date, plan_id, user_id, phone, name]
     );
 
+    const memberCode = crypto.randomInt(1000000);
+
+    await client.query(
+      `UPDATE users SET role = 'member', member_code = $1 WHERE user_id = $2`,
+      [memberCode, user_id]
+    );
+
+    const subject = "Membership Activated";
+    const fName = name.split(" ")[0];
+    const body = `Hi ${fName},
+    \nI hope this email finds you well. This email is regarding your membership at Uthau.'
+    \nThe code for activation: ' ${memberCode} '. Use this code to activate your membership.
+    \nThank you for the activation.
+    \nRegards,\nUthau Team
+    `;
+
+    const email = user.email;
+
+    const sent = await sendMail(email, subject, body);
+
+    if (!sent) {
+      return res
+        .status(500)
+        .json({ message: "This request can't be completed at the moment." });
+    }
+
     const newMember = result.rows[0];
     const member_id = newMember.member_id;
 
@@ -748,9 +786,160 @@ router.post("/member/convert", async (req, res) => {
 
     await client.query("COMMIT");
 
+    return res.status(200).json({
+      message: "User converted to member successfully.",
+      code: memberCode,
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.post("/member/convert/check/", async (req, res) => {
+  try {
+    const { email, plan_id } = req.body;
+
+    if (!email || !plan_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const userCheck = await pool.query(`SELECT * FROM users WHERE email = $1`, [
+      email,
+    ]);
+
+    if (userCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const user = userCheck.rows[0];
+    const user_id = user.user_id;
+
+    const memberCheck = await pool.query(
+      `SELECT * FROM members WHERE user_id = $1`,
+      [user_id]
+    );
+
+    if (memberCheck.rowCount > 0) {
+      return res
+        .status(400)
+        .json({ message: "The requested user is already a member. " });
+    }
+
+    const planCheck = await pool.query(
+      `SELECT * FROM plans WHERE plan_id = $1`,
+      [plan_id]
+    );
+
+    if (planCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested plan was not found." });
+    }
+
+    const plan = planCheck.rows[0];
+    const amount = plan.amount;
+
+    return res.status(200).json({
+      message: "Details verified.",
+      amount: amount,
+      plan_id: plan_id,
+      user_id: user_id,
+    });
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.post("/member/payment/convert", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { user_id, payment_id } = req.body;
+
+    if (!user_id || !payment_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1 AND role = 'normal'`,
+      [user_id]
+    );
+    if (userCheck.rowCount <= 0) {
+      return res.status(404).json({
+        message: "The requested user was not found or is already a member.",
+      });
+    }
+
+    const user = userCheck.rows[0];
+    const name = user.name;
+    const email = user.email;
+
+    const paymentCheck = await pool.query(
+      `SELECT * FROM payments WHERE payment_id = $1`,
+      [payment_id]
+    );
+
+    if (paymentCheck.rowCount <= 0) {
+      return res.status(404).json({
+        message: "The requested payment was not found.",
+      });
+    }
+
+    const planCheck = await pool.query(
+      `SELECT * FROM membership_transactions mt
+    JOIN plans p ON p.plan_id = mt.plan_id
+    WHERE mt.payment_id = $1`,
+      [payment_id]
+    );
+
+    const plan = planCheck.rows[0];
+    const plan_id = plan.plan_id;
+    const planDuration = plan.duration;
+
+    const payment = paymentCheck.rows[0];
+    const status = payment.status;
+
+    if (status !== "Completed") {
+      return res.status(400).json({ message: "Payment is not yet completed." });
+    }
+
+    await client.query("BEGIN");
+
+    const expiry_date = calculateExpiryDate(planDuration);
+    console.log("🚀 ~ expiry_date:", expiry_date);
+
+    await client.query(
+      `
+    INSERT INTO members (expiry_date, plan_id, user_id, name, email)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING *
+    `,
+      [expiry_date, plan_id, user_id, name, email]
+    );
+
+    const updatedUser = await client.query(
+      `UPDATE users SET role = 'member' WHERE user_id = $1  RETURNING *`,
+      [user_id]
+    );
+
+    await client.query("COMMIT");
+
+    const token = jwt.sign(
+      { user: updatedUser.rows[0] },
+      process.env.SECRET_KEY
+    );
+
     return res
       .status(200)
-      .json({ message: "User converted to member successfully." });
+      .json({ message: "Converted to member successfully.", token: token });
   } catch (error) {
     await client.query("ROLLBACK");
     console.log("🚀 ~ error:", error);
@@ -1045,6 +1234,180 @@ router.get("/trainer", async (req, res) => {
   }
 });
 
+// Endpoint to get a trainer's students
+router.get("/trainer/students/:trainer_id", async (req, res) => {
+  try {
+    const { trainer_id } = req.params;
+
+    const trainerCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [trainer_id]
+    );
+
+    if (trainerCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const trainer = trainerCheck.rows[0];
+    const role = trainer.role;
+
+    if (role !== "trainer") {
+      return res
+        .status(401)
+        .json({ message: "The requested user is not authorized." });
+    }
+
+    const result = await pool.query(
+      `SELECT * FROM trainer_assignment t
+    JOIN members m ON m.member_id = t.member_id
+    WHERE t.trainer_id = $1`,
+      [trainer_id]
+    );
+
+    const students = result.rows;
+
+    return res.status(200).json(students);
+  } catch (error) {
+    console.log("🚀 ~ trainer/students error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+// Endpoint to save evaluation
+router.post("/trainer/evaluate", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { trainer_id, member_id, grades, note } = req.body;
+
+    if (!trainer_id || !member_id || !grades) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const metricsArray = Object.entries(grades).map(([id, grade]) => ({
+      metrics_id: parseInt(id),
+      grade,
+    }));
+
+    const trainerCheck = await pool.query(
+      `SELECT * FROM trainers WHERE trainer_id = $1`,
+      [trainer_id]
+    );
+
+    if (trainerCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested trainer was not found." });
+    }
+
+    const memberCheck = await pool.query(
+      `SELECT * FROM members WHERE member_id  = $1`,
+      [member_id]
+    );
+
+    if (memberCheck.rowCount < 1) {
+      return res
+        .status(404)
+        .send({ message: "The requested member was not found." });
+    }
+
+    const evaluationCheck = await pool.query(
+      `SELECT *
+    FROM public.evaluations
+    WHERE member_id = $1
+    AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+    AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)`,
+      [member_id]
+    );
+
+    if (evaluationCheck.rowCount > 0) {
+      return res.status(400).json({
+        message: "This member has already been evaluated for the month.",
+      });
+    }
+
+    const assignemnetCheck = await pool.query(
+      `SELECT * FROM trainer_assignment WHERE trainer_id = $1 AND member_id = $2`,
+      [trainer_id, member_id]
+    );
+    if (assignemnetCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested member is not assigned." });
+    }
+
+    const getMetrics = await pool.query(`SELECT * FROM metrics`);
+    const metrics = getMetrics.rows;
+
+    const availableMetrics = metrics.map((metric) => metric.metrics_id);
+    console.log("🚀 ~ availableMetrics:", availableMetrics);
+
+    const requestMetrics = metricsArray.map((metric) => metric.metrics_id);
+    console.log("🚀 ~ requestMetrics:", requestMetrics);
+
+    const sortedAvailableMetrics = availableMetrics.sort((a, b) => a - b);
+    const sortedRequestMetrics = requestMetrics.sort((a, b) => a - b);
+
+    // Check if both sorted arrays are equal
+    const areEqual =
+      JSON.stringify(sortedAvailableMetrics) ===
+      JSON.stringify(sortedRequestMetrics);
+
+    if (!areEqual) {
+      return res
+        .status(400)
+        .json({ message: "Grades for all metrics required." });
+    }
+
+    await client.query("BEGIN");
+
+    const evaluationResult = await client.query(
+      `INSERT INTO evaluations (trainer_id, member_id, note) VALUES ($1, $2, $3) RETURNING *`,
+      [trainer_id, member_id, note]
+    );
+    const evaluation = evaluationResult.rows[0];
+    const evaluation_id = evaluation.evaluation_id;
+
+    await Promise.all(
+      metricsArray.map(async (grade) => {
+        const metricCheck = await client.query(
+          `SELECT * FROM metrics WHERE metrics_id = $1`,
+          [grade.metrics_id]
+        );
+
+        if (metricCheck.rowCount <= 0) {
+          return res
+            .status(404)
+            .json({ message: "The requested metric was not found." });
+        }
+
+        const validGrades = ["A", "B", "C", "D", "E", "F"];
+        if (!validGrades.includes(grade.grade)) {
+          return res.status(400).json({ message: "Invalid grade received." });
+        }
+
+        await client.query(
+          "INSERT INTO metric_evaluation (metrics_id, evaluation_id, grade) VALUES ($1, $2, $3)",
+          [grade.metrics_id, evaluation_id, grade.grade]
+        );
+      })
+    );
+
+    await client.query("COMMIT");
+
+    return res.status(200).json({ message: "Evaluation saved successfully" });
+  } catch (error) {
+    await client.query(`ROLLBACK`);
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
 // Endpoint to get all metrics
 router.get("/metrics", async (req, res) => {
   try {
@@ -1193,6 +1556,43 @@ router.get("/member/code/:id", async (req, res) => {
     return res.status(500).json({
       message: "Internal server error. Try again later.",
     });
+  }
+});
+
+router.post("/member/activate", async (req, res) => {
+  try {
+    const { code, user_id } = req.body;
+
+    if (!code || !user_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [user_id]
+    );
+    if (userCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+    const user = userCheck.rows[0];
+    const memberCode = user.member_code;
+
+    if (code !== memberCode) {
+      return res.status(400).json({ message: "Incorrect code. Try again." });
+    }
+
+    const token = jwt.sign({ user: user }, process.env.SECRET_KEY);
+
+    return res
+      .status(200)
+      .json({ message: "Coverted to member successfully.", token: token });
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
   }
 });
 

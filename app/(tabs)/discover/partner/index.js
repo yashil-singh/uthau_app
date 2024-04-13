@@ -24,12 +24,25 @@ import decodeToken from "../../../../helpers/decodeToken";
 import ErrorModal from "../../../../components/ErrorModal";
 import { Badge } from "react-native-paper";
 import { userRadius } from "../../../../helpers/constants";
+import useDecode from "../../../../hooks/useDecode";
 
 const index = () => {
   const { user } = useAuthContext();
-  const decodedToken = decodeToken(user);
-  const currentUser = decodedToken?.user;
-  const user_id = currentUser?.user_id;
+  const { getDecodedToken } = useDecode();
+
+  const [currentUser, setCurrentUser] = useState({});
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
+
+      if (response.success) {
+        setCurrentUser(response?.user);
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
 
   const router = useRouter();
   const [friends, setFriends] = useState([]);
@@ -64,7 +77,7 @@ const index = () => {
   useEffect(() => {
     setIsLoading(true);
     const getFriends = async () => {
-      const response = await getAllFriends({ user_id });
+      const response = await getAllFriends({ user_id: currentUser?.user_id });
 
       if (response.success) {
         const connections = response.data;
@@ -73,11 +86,12 @@ const index = () => {
     };
 
     const getRequests = async () => {
+      console.log(currentUser);
       const lat = location?.coords.latitude;
       const lng = location?.coords.longitude;
       const radius = userRadius;
       const response = await getUserRequestReceived({
-        user_id,
+        user_id: currentUser?.user_id,
         lat,
         lng,
         radius,
@@ -94,7 +108,7 @@ const index = () => {
     setTimeout(() => {
       setIsLoading(false);
     }, 500);
-  }, [user_id, location]);
+  }, [currentUser, location]);
 
   return (
     <MainContainer padding={15} gap={15}>

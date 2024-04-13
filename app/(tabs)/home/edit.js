@@ -35,6 +35,7 @@ import * as ImagePicker from "expo-image-picker";
 import firebase from "../../../config";
 import * as FileSystem from "expo-file-system";
 import { useRouter } from "expo-router";
+import useDecode from "../../../hooks/useDecode";
 const edit = () => {
   const router = useRouter();
   const {
@@ -163,7 +164,7 @@ const edit = () => {
     }
   };
 
-  const [isPageLoading, setIsPageLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   const [userDetails, setUserDetails] = useState({});
 
@@ -177,8 +178,26 @@ const edit = () => {
   const { getUserDetail, updateUserProfile } = useUsers();
 
   const { user } = useAuthContext();
-  const decodedToken = decodeToken(user);
-  const userToken = decodedToken?.user;
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const { getDecodedToken } = useDecode();
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
+
+      if (response.success) {
+        const user = response?.user;
+        if (user.role === "trainer") {
+          router.back();
+          return;
+        }
+        setCurrentUser(response?.user);
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
 
   const [isImageChanged, setIsImageChanged] = useState(false);
 
@@ -189,36 +208,33 @@ const edit = () => {
   ];
 
   const fetchUserDetails = async () => {
-    setIsPageLoading(true);
-    const response = await getUserDetail({ user_id: userToken?.user_id });
-    if (response.success) {
-      const userData = response.data[0];
+    if (currentUser) {
+      const response = await getUserDetail({ user_id: currentUser?.user_id });
+      if (response.success) {
+        const userData = response.data[0];
 
-      setUserDetails(userData);
-      reset({
-        name: userData?.name,
-        gender: userData?.gender,
-        email: userData?.email,
-        weight: userData?.weight,
-        height: userData?.height,
-        dob: formatDate(userData?.dob),
-        calorie_burn: userData?.calorie_burn,
-        calorie_intake: userData?.calorie_intake,
-        image: userData?.image,
-      });
-      setImageUrl(userData?.image);
-      setDate(new Date(userData?.dob));
-    } else {
-      setOpenErrorModal(true);
-      setErrorMessage(response.message);
-      setModalTitle("Error fetching user details");
+        setUserDetails(userData);
+        reset({
+          name: userData?.name,
+          gender: userData?.gender,
+          email: userData?.email,
+          weight: userData?.weight,
+          height: userData?.height,
+          dob: formatDate(userData?.dob),
+          calorie_burn: userData?.calorie_burn,
+          calorie_intake: userData?.calorie_intake,
+          image: userData?.image,
+        });
+        setImageUrl(userData?.image);
+        setDate(new Date(userData?.dob));
+      }
+      setIsPageLoading(false);
     }
-    setIsPageLoading(false);
   };
 
   useEffect(() => {
     fetchUserDetails();
-  }, [user]);
+  }, [currentUser]);
 
   const onDateChange = ({ type }, selectedDate) => {
     if (type == "set") {

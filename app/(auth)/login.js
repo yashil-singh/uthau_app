@@ -27,18 +27,13 @@ const login = () => {
   const onSubmit = async (data) => {
     const { email, password, keepLoggedIn } = data;
 
-    try {
-      const response = await login({ email, password, keepLoggedIn });
+    const response = await login({ email, password, keepLoggedIn });
 
-      if (response.success) {
-        setError(null);
-        router.push("/home");
-      } else {
-        setError(response.error);
-      }
-    } catch (error) {
-      console.log("🚀 ~ file: login.js:37 ~ error:", error);
-      setError("Unexpected error occured. Try again later.");
+    if (response.success) {
+      setError(null);
+      router.push("/home");
+    } else {
+      setError(response.error);
     }
   };
 

@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity } from "react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuthContext } from "../../../hooks/useAuthContext";
 import MainContainer from "../../../components/MainContainer";
 import { BodyText } from "../../../components/StyledText";
@@ -9,6 +9,7 @@ import { useLogout } from "../../../hooks/useLogout";
 import { decode as atob, encode as btoa } from "base-64";
 import { FontAwesome } from "@expo/vector-icons";
 import { Entypo } from "@expo/vector-icons";
+import useDecode from "../../../hooks/useDecode";
 
 const emailVerification = () => {
   const [message, setMessage] = useState(null);
@@ -17,16 +18,23 @@ const emailVerification = () => {
   const { logout } = useLogout();
 
   const { user } = useAuthContext();
+  const { getDecodedToken } = useDecode();
 
-  var email = null;
+  let userDetails;
+  let email = null;
 
-  if (user) {
-    const token = user?.token;
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
 
-    const decodedToken = JSON.parse(atob(token?.split(".")[1]));
+      if (response.success) {
+        userDetails = response.user;
+        email = userDetails?.email;
+      }
+    };
 
-    email = decodedToken.user_email;
-  }
+    fetchDecodedToken();
+  }, []);
 
   const { resendVerification } = useResendVerification();
 

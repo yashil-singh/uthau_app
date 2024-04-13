@@ -13,11 +13,34 @@ import { useNavigation, useRouter } from "expo-router";
 import useGym from "../../../hooks/useGym";
 import { colors } from "../../../helpers/theme";
 import ErrorModal from "../../../components/ErrorModal";
+import useDecode from "../../../hooks/useDecode";
 
 const reports = () => {
   const { user } = useAuthContext();
-  const decodedToken = decodeToken(user);
-  const userDetails = decodedToken?.user;
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const { getDecodedToken } = useDecode();
+
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
+
+      if (response.success) {
+        const user = response.user;
+
+        if (user.role !== "member") {
+          router.back();
+          return;
+        }
+        setCurrentUser(response?.user);
+        setIsPageLoading(false);
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
   const router = useRouter();
 
   const { getReportYears, getReport, getMemberById } = useGym();
@@ -96,32 +119,34 @@ const reports = () => {
   };
 
   const fetchMemberDetails = async () => {
-    setIsLoading(true);
-    const response = await getMemberById({ user_id: userDetails?.user_id });
-    if (response.success) {
-      setMemberDetails(response.member);
-    } else {
-      setErrorMessage(response.message);
-      setErrorModalTitle("Error fetching member details.");
-      setOpenErrorModal(true);
+    if (currentUser) {
+      setIsLoading(true);
+      const response = await getMemberById({ user_id: currentUser?.user_id });
+
+      if (response.success) {
+        const user = response.member;
+
+        if (user.status !== "Active") {
+          console.log("status");
+
+          router.back();
+          return;
+        }
+
+        setMemberDetails(response.member);
+      } else {
+        setErrorMessage(response.message);
+        setErrorModalTitle("Error fetching member details.");
+        setOpenErrorModal(true);
+      }
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {
     fetchYears();
     fetchMemberDetails();
-  }, []);
-
-  useEffect(() => {
-    setIsLoading(true);
-    if (userDetails) {
-      if (userDetails?.role !== "member") {
-        router.back();
-      }
-    }
-    setIsLoading(false);
-  }, [user]);
+  }, [currentUser]);
 
   function formatDateTime(datetime) {
     const date = new Date(datetime);
@@ -174,133 +199,154 @@ const reports = () => {
           setErrorModalTitle("");
         }}
       />
-      <View
-        style={{
-          felx: 1,
-          flexDirection: "row",
-          justifyContent: "space-around",
-        }}
-      >
-        <DropdownPicker
-          placeholder="Select month"
-          options={monthOptions}
-          style={{ width: 200 }}
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.value)}
-        />
-        <DropdownPicker
-          placeholder="Select year"
-          options={yearOptions}
-          style={{ width: 150 }}
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(e.value)}
-        />
-      </View>
-
-      {isLoading ? (
+      {isPageLoading ? (
         <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
         >
-          <ActivityIndicator size={"large"} color={colors.primary.normal} />
+          <ActivityIndicator color={colors.primary.normal} size={"large"} />
         </View>
-      ) : selectedMonth && selectedYear ? (
-        report.length === 0 ? (
+      ) : (
+        <>
           <View
             style={{
-              flex: 1,
-              justifyContent: "center",
-              alignItems: "center",
+              felx: 1,
+              flexDirection: "row",
+              justifyContent: "space-around",
             }}
           >
-            <BodyText
-              style={{
-                textAlign: "center",
-                fontSize: 16,
-                color: colors.gray,
-              }}
-            >
-              No records found.
-            </BodyText>
+            <DropdownPicker
+              placeholder="Select month"
+              options={monthOptions}
+              style={{ width: 200 }}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.value)}
+            />
+            <DropdownPicker
+              placeholder="Select year"
+              options={yearOptions}
+              style={{ width: 150 }}
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.value)}
+            />
           </View>
-        ) : (
-          <>
+
+          {isLoading ? (
             <View
               style={{
-                height: 200,
-                width: 200,
-                borderRadius: 100,
-                borderWidth: 5,
-                borderColor: colors.primary.normal,
-                alignSelf: "center",
-                display: "flex",
+                flex: 1,
                 justifyContent: "center",
                 alignItems: "center",
               }}
             >
-              <SubHeaderText>Overall</SubHeaderText>
-              <HeaderText style={{ fontSize: 32 }}>{overallGrade}</HeaderText>
+              <ActivityIndicator size={"large"} color={colors.primary.normal} />
             </View>
-            <View
-              style={{
-                padding: 15,
-                borderWidth: 1,
-                borderColor: colors.lightGray,
-                borderRadius: 8,
-              }}
-            >
-              <HeaderText style={{ fontSize: 18 }}>Grades</HeaderText>
-              {report.map((report, index) => (
+          ) : selectedMonth && selectedYear ? (
+            report.length === 0 ? (
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <BodyText
+                  style={{
+                    textAlign: "center",
+                    fontSize: 16,
+                    color: colors.gray,
+                  }}
+                >
+                  No records found.
+                </BodyText>
+              </View>
+            ) : (
+              <>
                 <View
                   style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
+                    height: 200,
+                    width: 200,
+                    borderRadius: 100,
+                    borderWidth: 5,
+                    borderColor: colors.primary.normal,
+                    alignSelf: "center",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
                   }}
-                  key={index}
                 >
-                  <BodyText>{report?.metric_name}</BodyText>
-                  <SubHeaderText>{report?.grade}</SubHeaderText>
+                  <SubHeaderText>Overall</SubHeaderText>
+                  <HeaderText style={{ fontSize: 32 }}>
+                    {overallGrade}
+                  </HeaderText>
                 </View>
-              ))}
-            </View>
-            <ScrollView
+                <View
+                  style={{
+                    padding: 15,
+                    borderWidth: 1,
+                    borderColor: colors.lightGray,
+                    borderRadius: 8,
+                  }}
+                >
+                  <HeaderText style={{ fontSize: 18 }}>Grades</HeaderText>
+                  {report.map((report, index) => (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                      }}
+                      key={index}
+                    >
+                      <BodyText>{report?.metric_name}</BodyText>
+                      <SubHeaderText>{report?.grade}</SubHeaderText>
+                    </View>
+                  ))}
+                </View>
+                <ScrollView
+                  style={{
+                    padding: 15,
+                    borderWidth: 1,
+                    borderColor: colors.lightGray,
+                    borderRadius: 8,
+                    maxHeight: 300,
+                  }}
+                >
+                  <HeaderText style={{ fontSize: 18 }}>
+                    Note from Trainer
+                  </HeaderText>
+                  <View style={{ flex: 1, marginBottom: 15 }}>
+                    <BodyText style={{ color: colors.gray }}>
+                      {report[0]?.note}
+                    </BodyText>
+                  </View>
+                  <BodyText style={{ color: colors.gray }}>
+                    by {memberDetails?.trainer_name}
+                  </BodyText>
+                </ScrollView>
+                <BodyText style={{ color: colors.gray, alignSelf: "flex-end" }}>
+                  Created: {formatDateTime(report[0]?.created_at)}
+                </BodyText>
+              </>
+            )
+          ) : (
+            <View
               style={{
-                padding: 15,
-                borderWidth: 1,
-                borderColor: colors.lightGray,
-                borderRadius: 8,
-                maxHeight: 300,
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
               }}
             >
-              <HeaderText style={{ fontSize: 18 }}>
-                Note from Trainer
-              </HeaderText>
-              <BodyText style={{ color: colors.gray }}>
-                {report[0]?.note}
+              <BodyText
+                style={{
+                  color: colors.gray,
+                  textAlign: "center",
+                  fontSize: 16,
+                }}
+              >
+                Please select month and year to view your report.
               </BodyText>
-            </ScrollView>
-            <BodyText style={{ color: colors.gray, alignSelf: "flex-end" }}>
-              Created: {formatDateTime(report[0]?.created_at)}
-            </BodyText>
-          </>
-        )
-      ) : (
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <BodyText
-            style={{ color: colors.gray, textAlign: "center", fontSize: 16 }}
-          >
-            Please select month and year to view your report.
-          </BodyText>
-        </View>
+            </View>
+          )}
+        </>
       )}
     </MainContainer>
   );

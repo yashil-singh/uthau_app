@@ -3,23 +3,38 @@ import { useAuthContext } from "../../hooks/useAuthContext";
 import { useEffect } from "react";
 import { RegisterContextProvider } from "../../context/RegisterContext";
 import decodeToken from "../../helpers/decodeToken";
+import useDecode from "../../hooks/useDecode";
 
 export default function Layout() {
   const { user } = useAuthContext();
-  const decodedToken = decodeToken(user);
-  const userDetails = decodedToken?.user;
+  // const decodedToken = decodeToken(user);
+  // const userDetails = decodedToken?.user;
 
-  const navigation = useNavigation();
+  let userDetails;
+
+  const { getDecodedToken } = useDecode();
 
   useEffect(() => {
-    if (user) {
-      if (userDetails?.isverified) {
-        navigation.navigate("(tabs)", { screen: "home" });
-      } else {
-        navigation.navigate("(verification)", { screen: "emailVerification" });
+    const fetchDecodedToken = async () => {
+      if (user) {
+        const response = await getDecodedToken();
+        if (response.success) {
+          const userDetails = response.user;
+          if (userDetails?.isverified) {
+            navigation.navigate("(tabs)", { screen: "home" });
+          } else {
+            navigation.navigate("(verification)", {
+              screen: "emailVerification",
+            });
+          }
+        }
       }
-    }
-  }, [user]);
+    };
+
+    fetchDecodedToken();
+  }, [user, userDetails]);
+
+  const navigation = useNavigation();
 
   return (
     <RegisterContextProvider>

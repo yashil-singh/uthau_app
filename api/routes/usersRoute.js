@@ -47,6 +47,32 @@ function calculateDistance(coord1, coord2) {
   return distance;
 }
 
+const sendMail = async (email, subject, body) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.MAILER_USER,
+      pass: process.env.MAILER_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: "uthau.com",
+    to: email,
+    subject: subject,
+    text: body,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully.");
+    return { err: false };
+  } catch (error) {
+    console.log("🚀 ~ file: authRoute.js:32 ~ error:", error);
+    return { err: true };
+  }
+};
+
 router.get("/get-all", async (req, res) => {
   try {
     const result = await pool.query(
@@ -65,7 +91,6 @@ router.get("/get-all", async (req, res) => {
 
 router.get("/get/:user_id", async (req, res) => {
   const { user_id } = req.params;
-  console.log("🚀 ~ user_id:", user_id);
 
   try {
     if (!user_id) {
@@ -78,7 +103,6 @@ router.get("/get/:user_id", async (req, res) => {
     );
 
     const user = result.rows;
-    console.log("🚀 ~ user:", user);
 
     if (user.length === 0) {
       return res.status(404).json({ message: "User not found" });
@@ -86,7 +110,6 @@ router.get("/get/:user_id", async (req, res) => {
 
     return res.status(200).json(user);
   } catch (error) {
-    console.log("🚀 ~ usersRoute.js getuser error:", error);
     return res
       .status(500)
       .json({ message: "Internal server error. Try again later." });
@@ -120,6 +143,8 @@ router.post("/update", async (req, res) => {
         .status(404)
         .json({ message: "The requested user was not found." });
     }
+
+    const beforeUpdate = userCheck.rows[0];
 
     const currentDate = new Date();
 
@@ -173,7 +198,19 @@ router.post("/update", async (req, res) => {
 
     const user = result.rows[0];
     const isVerified = user.isVerified;
-    console.log("🚀 ~ isVerified:", isVerified);
+    const currentWeight = beforeUpdate.weight;
+    console.log("🚀 ~ currentWeight:", currentWeight);
+    console.log("🚀 ~ weight:", weight);
+
+    console.log(currentWeight === weight);
+    console.log(currentWeight == weight);
+
+    if (currentWeight !== weight) {
+      await pool.query(
+        `INSERT INTO weight_progress (user_id, weight) VALUES ($1, $2)`,
+        [user_id, weight]
+      );
+    }
 
     const token = jwt.sign({ user: user }, process.env.SECRET_KEY);
 
@@ -189,7 +226,129 @@ router.post("/update", async (req, res) => {
   }
 });
 
+router.get("/weight/:id/:range", async (req, res) => {
+  try {
+    const { id, range } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [id]
+    );
+    if (userCheck.rowCount < 1) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    let result;
+
+    if (range || !range == null || !range == 0) {
+      const currentDate = new Date();
+      const newDate = new Date();
+
+      newDate.setDate(currentDate.getDate() - range);
+
+      result = await pool.query(
+        `SELECT * FROM weight_progress WHERE user_id = $1 AND log_date >= $2 ORDER BY log_date ASC`,
+        [id, newDate]
+      );
+    } else {
+      result = await pool.query(
+        `SELECT * FROM weight_progress WHERE user_id = $1 ORDER BY log_date ASC`,
+        [id]
+      );
+    }
+
+    const weightLogs = result.rows;
+
+    return res.status(200).json(weightLogs);
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.post("/weight/log", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { user_id, weight, date } = req.body;
+
+    if (!user_id || !weight) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    if (weight <= 15 || weight > 350) {
+      return res.status(400).json({ message: "Invalid weight received." });
+    }
+
+    const currentDate = new Date();
+    const logDate = new Date(date);
+
+    const logCheck = await pool.query(
+      `SELECT * FROM weight_progress WHERE user_id = $1 AND log_date = $2`,
+      [user_id, logDate]
+    );
+    if (logCheck.rowCount > 0) {
+      return res
+        .status(400)
+        .json({ message: "Weight already logged for that date." });
+    }
+
+    if (date && logDate > currentDate) {
+      return res.status(400).json({ message: "Invalid date provided." });
+    }
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [user_id]
+    );
+
+    if (userCheck.rowCount < 1) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    await client.query(`BEGIN`);
+
+    await client.query(
+      `INSERT INTO weight_progress (user_id, weight, log_date) VALUES($1, $2, $3)`,
+      [user_id, weight, date]
+    );
+
+    logDate.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
+
+    console.log("🚀 ~ logDate:", logDate);
+    console.log("🚀 ~ currentDate:", currentDate);
+    console.log(logDate.toISOString() === currentDate.toISOString());
+    if (logDate.toISOString() === currentDate.toISOString()) {
+      await client.query(`UPDATE users SET weight =$1 WHERE user_id = $2`, [
+        weight,
+        user_id,
+      ]);
+    }
+
+    await client.query(`COMMIT`);
+
+    return res.status(200).json({ message: "Weight logged successfully." });
+  } catch (error) {
+    await client.query(`ROLLBACK`);
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
 router.post("/add/trainer", async (req, res) => {
+  const client = await pool.connect();
   try {
     const { name, email, gender, age, shift, startTime, endTime } = req.body;
 
@@ -215,10 +374,6 @@ router.post("/add/trainer", async (req, res) => {
       return res.status(400).json({ message: "Invalid start and end times." });
     }
 
-    const password = crypto.randomBytes(8).toString("hex");
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
     const role = "trainer";
     const isVerified = true;
 
@@ -230,6 +385,20 @@ router.post("/add/trainer", async (req, res) => {
       return res.status(400).json({ message: "Email is already in use." });
     }
 
+    const password = crypto.randomBytes(8).toString("hex");
+    console.log("🚀 ~ password:", password);
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    await client.query(`BEGIN`);
+
+    const subject = "Account Created at Uthau";
+    const fName = name.split(" ")[0];
+    const body = `Hi ${fName},\nCongratulations on joining our gym as a trainer! 🎉 We're thrilled to have you on board and excited to see the positive impact you'll make on our members' fitness journeys. Welcome to the team!\nHere is your password '${password}'. Feel free to change it anytime.\nLooking forward to working together,\n\nUthau Team`;
+
+    sendMail(email, subject, body);
+
     const result = await pool.query(
       "INSERT INTO users(name, email, gender, age, password, role, isVerified) VALUES ($1, $2, $3, $4, $5, $6, $7)  RETURNING *",
       [name, email, gender, age, hashedPassword, role, isVerified]
@@ -239,15 +408,18 @@ router.post("/add/trainer", async (req, res) => {
 
     const user_id = user.user_id;
 
-    await pool.query(
+    await client.query(
       "INSERT INTO trainers(trainer_id, start_time, end_time, shift) VALUES ($1, $2, $3, $4)",
       [user_id, startTime, endTime, shift]
     );
+
+    client.query(`COMMIT`);
 
     return res
       .status(200)
       .json({ message: "Trainer profile created successfully." });
   } catch (error) {
+    client.query(`ROLLBACK`);
     console.log("🚀 ~ add trainer error:", error);
     return res
       .status(500)
@@ -686,6 +858,187 @@ router.post("/friends/requests/accept", async (req, res) => {
     return res
       .status(500)
       .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.post("/steps/log", async (req, res) => {
+  try {
+    const { user_id, steps } = req.body;
+
+    if (!user_id || !steps) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    if (steps < 1) {
+      return res.status(400).json({ message: "Invalid steps received." });
+    }
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [user_id]
+    );
+    if (userCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const logCheck = await pool.query(
+      `SELECT * FROM step_logs WHERE user_id = $1 AND date = CURRENT_DATE`,
+      [user_id]
+    );
+
+    if (logCheck.rowCount <= 0) {
+      await pool.query(
+        `INSERT INTO step_logs (user_id, steps) VALUES ($1, $2)`,
+        [user_id, steps]
+      );
+    } else {
+      await pool.query(`UPDATE step_logs SET steps = $1 WHERE user_id = $2`, [
+        steps,
+        user_id,
+      ]);
+    }
+
+    return res.status(200).json({ message: "Step logged successfully." });
+  } catch (error) {
+    console.log("🚀 ~ /steps/log error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.get("/steps/log/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [id]
+    );
+
+    if (userCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const logsCheck = await pool.query(
+      `SELECT * FROM step_logs WHERE user_id = $1 AND date = CURRENT_DATE`,
+      [id]
+    );
+    const logs = logsCheck.rows;
+
+    return res.status(200).json(logs);
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.post("/ar/points", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [user_id]
+    );
+    if (userCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const logCheck = await pool.query(
+      `SELECT * FROM step_logs WHERE user_id = $1 AND date = CURRENT_DATE`,
+      [user_id]
+    );
+
+    const log = logCheck.rows[0];
+    console.log("🚀 ~ log:", log);
+
+    const log_id = log.log_id;
+    const steps = log.steps;
+    const claimed = log.claimed;
+
+    if (steps < 10000) {
+      return res.status(400).json({ message: "Goal is not completed yet." });
+    }
+
+    if (claimed) {
+      return res
+        .status(400)
+        .json({ message: "Points already claimed for today." });
+    }
+
+    const points = 50;
+
+    await client.query(`BEGIN`);
+
+    await client.query(
+      `UPDATE step_logs SET claimed = true WHERE user_id = $1 AND date = CURRENT_DATE`,
+      [user_id]
+    );
+
+    await client.query(
+      `INSERT INTO ar_points (user_id, points, log_id) VALUES ($1, $2, $3)`,
+      [user_id, points, log_id]
+    );
+
+    await client.query(`COMMIT`);
+
+    return res
+      .status(200)
+      .json({ message: "Congratulations! Points awarded." });
+  } catch (error) {
+    await client.query(`ROLLBACK`);
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.get("/ar/points/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [id]
+    );
+
+    if (userCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const pointsCheck = await pool.query(
+      `SELECT * FROM ar_points WHERE user_id = $1`,
+      [id]
+    );
+
+    const points = pointsCheck.rows;
+    console.log("🚀 ~ points:", points);
+
+    const totalPoints = points.reduce((total, curr) => total + curr.points, 0);
+
+    return res.status(200).json(totalPoints);
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internaal server error. Try again later." });
   }
 });
 

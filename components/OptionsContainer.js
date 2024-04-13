@@ -1,13 +1,13 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Pressable } from "react-native";
 import React from "react";
 import { Entypo } from "@expo/vector-icons";
-import { BodyText, HeaderText, SubHeaderText } from "./StyledText";
+import { BodyText, SubHeaderText } from "./StyledText";
 import { colors } from "../helpers/theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 const OptionsContainer = ({ children, title, desc, color, onPress }) => {
   return (
-    <Animated.View entering={FadeInDown.springify()}>
+    <Animated.View entering={FadeInDown}>
       <Pressable
         style={{
           borderRadius: 8,

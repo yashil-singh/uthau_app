@@ -1,4 +1,4 @@
-import { KeyboardAvoidingView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useRouter } from "expo-router";
 import { colors } from "../../helpers/theme";
 import DropdownPicker from "../../components/DropdownPicker";
@@ -42,7 +42,7 @@ const about = () => {
     >
       <View style={{ gap: 15 }}>
         <BodyText style={{ color: colors.gray, fontSize: 16 }}>
-          Please answers these correctly.
+          Please answer these correctly.
         </BodyText>
 
         <Controller
