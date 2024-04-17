@@ -421,6 +421,7 @@ const recipes = () => {
                   )}
                   renderItem={({ item, index }) => (
                     <CardOption
+                      showBookmark={true}
                       desc={`${Math.floor(item.calories)
                         .toFixed(0)
                         .toLocaleString()} cals \n`}

@@ -21,6 +21,18 @@ export default function Layout() {
         }}
       />
       <Stack.Screen
+        name="exercises"
+        options={{
+          headerTitle: "Workouts",
+        }}
+      />
+      <Stack.Screen
+        name="diet"
+        options={{
+          headerTitle: "Diet Plan",
+        }}
+      />
+      <Stack.Screen
         name="reports"
         options={{
           headerTitle: "Performance Reports",

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import React from "react";
 import useGym from "../../../hooks/useGym";
@@ -19,12 +20,7 @@ import {
   SubHeaderText,
 } from "../../../components/StyledText";
 import { colors } from "../../../helpers/theme";
-import {
-  ActivityIndicator,
-  Portal,
-  Snackbar,
-  TouchableRipple,
-} from "react-native-paper";
+import { Portal, Snackbar, TouchableRipple } from "react-native-paper";
 import {
   MaterialCommunityIcons,
   MaterialIcons,
@@ -63,6 +59,7 @@ const competition = () => {
   const { onInitializePay, onPayCompetitionEntry } = usePay();
   const [competitions, setCompetitions] = useState([]);
   const [activeCompetitions, setActiveCompetitions] = useState([]);
+
   const [expiredCompetitions, setExpiredCompetitions] = useState([]);
 
   // Modal related states
@@ -88,13 +85,19 @@ const competition = () => {
 
     if (filter == "active") {
       filteredCompetitons = competitionsToFilter.filter((comp) => {
-        return new Date(comp.entry_deadline) >= currentDate;
+        return (
+          new Date(comp.entry_deadline) >=
+          new Date(currentDate.setHours(0, 0, 0, 0))
+        );
       });
     }
 
     if (filter == "expired") {
       filteredCompetitons = competitionsToFilter.filter((comp) => {
-        return new Date(comp.entry_deadline) < currentDate;
+        return (
+          new Date(comp.entry_deadline) <
+          new Date(currentDate).setHours(0, 0, 0, 0)
+        );
       });
     }
     return filteredCompetitons;
@@ -102,10 +105,13 @@ const competition = () => {
 
   const fetchCompetitions = async () => {
     setIsLoading(true);
+    setIsRefreshing(true);
+
     const response = await getCompetitions();
 
     if (response.success) {
       const announcements = response?.announcements;
+
       setCompetitions(announcements);
 
       setActiveCompetitions(
@@ -127,12 +133,14 @@ const competition = () => {
     }
 
     setIsLoading(false);
+    setIsRefreshing(false);
   };
 
   const [openToast, setOpenToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
   const [isPayLodaing, setIsPayLodaing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const onPay = async ({
     fitness_competition_id,
@@ -430,12 +438,13 @@ const competition = () => {
           <HeaderText style={{ fontSize: 18 }}>Active Competitions</HeaderText>
           {activeCompetitions.length > 0 ? (
             <FlatList
+              onRefresh={() => fetchCompetitions()}
+              refreshing={isRefreshing}
               data={filterCompetitions({
                 filter: "active",
                 competitionsToFilter: competitions,
               })}
               style={{
-                maxHeight: 400,
                 gap: 15,
               }}
               renderItem={(comp) => (
@@ -527,7 +536,7 @@ const competition = () => {
             </View>
           )}
 
-          <Pressable
+          {/* <Pressable
             style={{
               flexDirection: "row",
               alignItems: "center",
@@ -583,7 +592,7 @@ const competition = () => {
               )}
               showsVerticalScrollIndicator={false}
             />
-          )}
+          )} */}
         </View>
       )}
     </MainContainer>

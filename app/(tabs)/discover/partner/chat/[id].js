@@ -90,46 +90,50 @@ const chat = () => {
   };
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: "",
-      headerLeft: () => (
-        <View
-          style={{
-            paddingVertical: 15,
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 15,
-          }}
-        >
-          <TouchableRipple style={{ borderRadius: 100, padding: 5 }}>
-            <Feather
-              name="arrow-left"
-              size={24}
-              color="black"
-              onPress={() => router.back()}
-            />
-          </TouchableRipple>
-          <Pressable
-            onPress={() => router.push(`/discover/partner/profile/${id}`)}
-            style={{ flex: 1, flexDirection: "row", gap: 10 }}
+    if (receiver) {
+      navigation.setOptions({
+        headerTitle: "",
+        headerLeft: () => (
+          <View
+            style={{
+              paddingVertical: 15,
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 15,
+            }}
           >
-            <Image
-              source={{ uri: receiver?.image }}
-              width={40}
-              height={40}
-              style={{ borderRadius: 100 }}
-            />
-            <View>
-              <HeaderText>{receiver?.name}</HeaderText>
-              <BodyText style={{ fontSize: 12, color: colors.gray }}>
-                {receiver?.email}
-              </BodyText>
-            </View>
-          </Pressable>
-        </View>
-      ),
-    });
+            <TouchableRipple style={{ borderRadius: 100, padding: 5 }}>
+              <Feather
+                name="arrow-left"
+                size={24}
+                color="black"
+                onPress={() => router.back()}
+              />
+            </TouchableRipple>
+            {receiver && (
+              <Pressable
+                onPress={() => router.push(`/discover/partner/profile/${id}`)}
+                style={{ flex: 1, flexDirection: "row", gap: 10 }}
+              >
+                <Image
+                  source={{ uri: receiver?.image }}
+                  width={40}
+                  height={40}
+                  style={{ borderRadius: 100 }}
+                />
+                <View>
+                  <HeaderText>{receiver?.name}</HeaderText>
+                  <BodyText style={{ fontSize: 12, color: colors.gray }}>
+                    {receiver?.email}
+                  </BodyText>
+                </View>
+              </Pressable>
+            )}
+          </View>
+        ),
+      });
+    }
   });
 
   useEffect(() => {

@@ -133,6 +133,7 @@ const payment = () => {
       user_id: currentUser?.user_id,
       payment_id: order_id,
     });
+    console.log("🚀 ~ response:", response);
 
     const token = response.token;
 

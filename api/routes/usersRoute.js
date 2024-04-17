@@ -42,6 +42,7 @@ function calculateDistance(coord1, coord2) {
       Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
   const distance = (earthRadius * c).toFixed(2);
 
   return distance;
@@ -590,20 +591,24 @@ router.get("/friends/get-nearby", async (req, res) => {
       `SELECT 
       u.user_id,
       u.name,
+      u.role,
+      u.email,
       u.image,
       u.longitude,
       u.latitude
   FROM 
       users u
+  LEFT JOIN 
+      partners p ON (u.user_id = p.sender_id OR u.user_id = p.receiver_id)
+                  AND (p.sender_id = $1 OR p.receiver_id = $1)
+                  AND p.isConnected = true
   WHERE 
       u.user_id <> $1
-      AND NOT EXISTS (
-          SELECT 1
-          FROM partners p
-          WHERE (u.user_id = p.sender_id OR u.user_id = p.receiver_id)
-              AND (p.sender_id = $1 OR p.receiver_id = $1)
-              AND p.isConnected = true
-      );`,
+      AND p.sender_id IS NULL
+      AND p.receiver_id IS NULL
+      AND u.isverified = true
+    AND u.longitude IS NOT NULL
+    AND u.latitude IS NOT NULL`,
       [user_id]
     );
 
@@ -616,8 +621,6 @@ router.get("/friends/get-nearby", async (req, res) => {
         return;
       }
 
-      console.log(user);
-
       const longitude = user.longitude;
       const latitude = user.latitude;
 
@@ -626,12 +629,11 @@ router.get("/friends/get-nearby", async (req, res) => {
       }
 
       const location = {
-        latitude: latitude,
-        longitude: longitude,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
       };
 
       const distance = calculateDistance(location, userLocation);
-      console.log("🚀 ~ distance:", distance);
 
       if (distance <= parseFloat(radius)) {
         userDistance.push({ user_id: user.user_id, distance: distance });
@@ -652,7 +654,6 @@ router.get("/friends/get-nearby", async (req, res) => {
 
       return user;
     });
-    console.log("🚀 ~ combine:", combine);
 
     const nearbyUsers = combine.filter((user) => {
       if (user.distance != undefined || user.distance != null) {
@@ -683,7 +684,7 @@ router.get("/friends/requests/received", async (req, res) => {
     };
 
     const requestResult = await pool.query(
-      `SELECT DISTINCT p.sender_id, u.name, u.image, u.longitude, u.latitude
+      `SELECT DISTINCT p.sender_id, u.name, u.email, u.image, u.longitude, u.latitude
       FROM partners p 
       JOIN users u ON 
       u.user_id = p.sender_id
@@ -772,6 +773,42 @@ router.get("/friends/requests/sent", async (req, res) => {
   }
 });
 
+router.get("/friends/requests/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("🚀 ~ req.query:", req.query);
+
+    if (!id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const userCheck = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [id]
+    );
+
+    if (userCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const result = await pool.query(
+      `SELECT * FROM partners WHERE isconnected = false AND (sender_id = $1 OR receiver_id = $1)`,
+      [id]
+    );
+
+    const requests = result.rows;
+
+    return res.status(200).json(requests);
+  } catch (error) {
+    console.log("🚀 ~ /friends/requests/ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
 router.post("/friends/requests/send", async (req, res) => {
   try {
     const { sender_id, receiver_id } = req.body;
@@ -784,7 +821,7 @@ router.post("/friends/requests/send", async (req, res) => {
 
     if (sender_id === receiver_id) {
       return res.status(400).json({
-        message: "Invalid request. Can't send a request to yourself.",
+        message: "Can't send a request to yourself.",
       });
     }
 
@@ -800,7 +837,7 @@ router.post("/friends/requests/send", async (req, res) => {
 
     if (senderCheck.rowCount <= 0 || receiverCheck.rowCount <= 0) {
       return res.status(404).json({
-        message: "Invalid request. Either sender or receiver not found.",
+        message: "Either sender or receiver not found.",
       });
     }
 
@@ -810,9 +847,7 @@ router.post("/friends/requests/send", async (req, res) => {
     );
 
     if (check.rowCount > 0) {
-      return res
-        .status(400)
-        .json({ message: "Invalid request. Request is already sent." });
+      return res.status(400).json({ message: "Request is already sent." });
     }
 
     await pool.query(
@@ -821,6 +856,48 @@ router.post("/friends/requests/send", async (req, res) => {
     );
 
     return res.status(200).json({ message: "Request sent successfully." });
+  } catch (error) {
+    console.log("🚀 ~ usersRoute.js error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.post("/friends/requests/remove", async (req, res) => {
+  try {
+    const { sender_id, receiver_id } = req.body;
+
+    if (!sender_id || !receiver_id) {
+      return res.status(400).json({
+        message: "Invalid request.",
+      });
+    }
+
+    const check = await pool.query(
+      "SELECT * FROM partners WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)",
+      [sender_id, receiver_id]
+    );
+
+    if (check.rowCount <= 0) {
+      return res.status(400).json({ message: "Partner request not found." });
+    }
+
+    const requests = check.rows[0];
+    console.log("🚀 ~ requests sent:", requests);
+
+    if (requests.isconnected) {
+      return res.status(400).json({
+        message: "Request is already accepted. It can't be removed now.",
+      });
+    }
+
+    await pool.query(
+      "DELETE FROM partners WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)",
+      [sender_id, receiver_id]
+    );
+
+    return res.status(200).json({ message: "Request removed successfully." });
   } catch (error) {
     console.log("🚀 ~ usersRoute.js error:", error);
     return res
@@ -861,6 +938,103 @@ router.post("/friends/requests/accept", async (req, res) => {
   }
 });
 
+router.post("/friends/requests/reject", async (req, res) => {
+  try {
+    const { sender_id, receiver_id } = req.body;
+
+    if (!sender_id || !receiver_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const requestCheck = await pool.query(
+      `SELECT * FROM partners WHERE sender_id = $1 AND receiver_id = $2`,
+      [sender_id, receiver_id]
+    );
+
+    if (requestCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested friend request was not found." });
+    }
+
+    await pool.query(
+      `DELETE FROM partners
+      WHERE sender_id = $1 AND receiver_id = $2`,
+      [sender_id, receiver_id]
+    );
+
+    return res.status(200).json({ message: "Request rejected successfully." });
+  } catch (error) {
+    console.log("🚀 ~ usersRoute.js error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.post("/friends/remove", async (req, res) => {
+  try {
+    const { sender_id, receiver_id } = req.body;
+
+    if (!sender_id || !receiver_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const partnerCheck = pool.query(
+      `SELECT * FROM partners WHERE (sender_id = $1 AND receiver_id = $2) OR (receiver_id = $1 AND sender_id = $2)`,
+      [sender_id, receiver_id]
+    );
+
+    if ((await partnerCheck).rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested users are not friends. " });
+    }
+
+    await pool.query(
+      `DELETE FROM partners WHERE (sender_id = $1 AND receiver_id = $2) OR (receiver_id = $1 AND sender_id = $2)`,
+      [sender_id, receiver_id]
+    );
+
+    return res.status(200).json({ message: "Friend removed successfully." });
+  } catch (error) {
+    console.log("🚀 ~ /friends/remove error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.get("/friends/:id/:id2", async (req, res) => {
+  try {
+    const { id, id2 } = req.params;
+
+    if (!id || !id2) {
+      return res.status(400).json({ message: "Invalid request. " });
+    }
+
+    const check = await pool.query(
+      `SELECT * FROM partners WHERE (sender_id = $1 AND receiver_id = $2) OR (receiver_id = $1 AND sender_id = $2)`,
+      [id, id2]
+    );
+
+    if (check.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested users are not friends." });
+    }
+
+    const partners = check.rows[0];
+
+    return res.status(200).json(partners);
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
 router.post("/steps/log", async (req, res) => {
   try {
     const { user_id, steps } = req.body;
@@ -869,7 +1043,7 @@ router.post("/steps/log", async (req, res) => {
       return res.status(400).json({ message: "Invalid request." });
     }
 
-    if (steps < 1) {
+    if (steps < 0) {
       return res.status(400).json({ message: "Invalid steps received." });
     }
 

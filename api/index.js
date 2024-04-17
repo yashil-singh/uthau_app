@@ -53,6 +53,7 @@ io.on("connection", (socket) => {
         AND isConnected = true`,
         [user_id, id]
       );
+      console.log("🚀 ~ check:", check.rows);
 
       if (check.rowCount <= 0) {
         console.log("NOT SENT.");

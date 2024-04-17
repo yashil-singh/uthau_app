@@ -30,15 +30,18 @@ import Portal from "react-native-paper/src/components/Portal/Portal";
 const find = () => {
   const router = useRouter();
 
-  const { getNearByUsers } = useUsers();
-
-  const { updateUserLocation, sendRequest, getUserRequestSent } = useUsers();
+  const {
+    updateUserLocation,
+    sendRequest,
+    getNearByUsers,
+    removeRequest,
+    getUserRequests,
+    acceptRequest,
+  } = useUsers();
   const [location, setLocation] = useState(null);
 
   const { user } = useAuthContext();
   const { getDecodedToken } = useDecode();
-
-  const [isPageLoading, setIsPageLoading] = useState(true);
 
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -48,7 +51,6 @@ const find = () => {
 
       if (response.success) {
         setCurrentUser(response?.user);
-        setIsPageLoading(false);
       }
     };
 
@@ -56,9 +58,9 @@ const find = () => {
   }, [user]);
 
   const [nearbyUsers, setNearbyUsers] = useState([]);
-  const [requestSent, setRequestSent] = useState([]);
+  const [userRequests, setUserRequests] = useState([]);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   //Modal related states
   const [openErrorModal, setOpenErrorModal] = useState(false);
@@ -69,30 +71,41 @@ const find = () => {
   const [openToast, setOpenToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const onSendRequest = async ({ sender_id, receiver_id }) => {
     if (currentUser) {
       const response = await sendRequest({ sender_id, receiver_id });
-      console.log("🚀 ~ response:", response);
+
+      if (response.success) {
+        fetchUserRequests();
+      }
 
       setOpenToast(true);
       setToastMessage(response.message);
-
-      if (response.success) {
-        getNearByUsers();
-      }
     }
+  };
+
+  const onRemoveRequest = async ({ sender_id, receiver_id }) => {
+    const response = await removeRequest({ sender_id, receiver_id });
+    if (response.success) {
+      fetchUserRequests();
+    }
+
+    setOpenToast(true);
+    setToastMessage(response.message);
   };
 
   useEffect(() => {
     const fetch = async () => {
-      if (currentUser) {
+      let location = await Location.getCurrentPositionAsync({});
+      if (currentUser && location) {
         let { status } = await Location.requestForegroundPermissionsAsync();
 
         if (status !== "granted") {
           setOpenPermissionErrorModal(true);
           return;
         }
-        let location = await Location.getCurrentPositionAsync({});
 
         setLocation(location);
 
@@ -109,31 +122,53 @@ const find = () => {
           setErrorMessage(response.message);
         }
 
-        const requestSentResponse = await getUserRequestSent({
-          user_id: currentUser?.user_id,
-        });
-
-        if (requestSentResponse.success) {
-          setRequestSent(requestSentResponse.requests);
-        }
-
-        const nearbyUsersResponse = await getNearByUsers({
-          lat: location.coords.latitude,
-          lng: location.coords.longitude,
-          radius: 20,
-          user_id: currentUser?.user_id,
-        });
-
-        if (nearbyUsersResponse.success) {
-          setNearbyUsers(nearbyUsersResponse.nearbyUsers);
-        }
-
         setIsLoading(false);
       }
     };
 
     fetch();
-  }, [user, currentUser, openToast]);
+  }, [user, currentUser]);
+
+  const fetchNearbyUsers = async () => {
+    if (currentUser && location) {
+      const response = await getNearByUsers({
+        lat: location.coords.latitude,
+        lng: location.coords.longitude,
+        radius: 20,
+        user_id: currentUser?.user_id,
+      });
+
+      if (response.success) {
+        setNearbyUsers(response.nearbyUsers);
+        fetchUserRequests();
+      }
+    }
+  };
+
+  const fetchUserRequests = async () => {
+    if (currentUser) {
+      const response = await getUserRequests({ user_id: currentUser?.user_id });
+
+      if (response.success) {
+        setUserRequests(response.requests);
+      }
+    }
+  };
+
+  const onRequestAccept = async ({ sender_id, receiver_id }) => {
+    const resposne = await acceptRequest({ receiver_id, sender_id });
+
+    setOpenToast(true);
+    setToastMessage(resposne.message);
+
+    if (resposne.success) {
+      fetchNearbyUsers();
+    }
+  };
+
+  useEffect(() => {
+    fetchNearbyUsers();
+  }, [currentUser, location]);
 
   return (
     <MainContainer padding={15}>
@@ -189,21 +224,29 @@ const find = () => {
         <View
           style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
         >
-          <ActivityIndicator
-            size={"large"}
-            color={colors.primary.normal}
-            style={{ flex: 1, justifyContent: "center" }}
-          />
+          <HeaderText
+            style={{ textAlign: "center", fontSize: 18, marginBottom: 10 }}
+          >
+            Searching Nearby...
+          </HeaderText>
+          <ActivityIndicator size={"large"} color={colors.primary.normal} />
         </View>
       ) : nearbyUsers.length > 0 ? (
         <FlatList
           data={nearbyUsers}
           key={(index) => index}
+          refreshing={isRefreshing}
+          onRefresh={fetchNearbyUsers}
           showsVerticalScrollIndicator={false}
           renderItem={(item) => {
-            const isRequestSent = requestSent.some(
-              (request) => request.receiver_id === item.item.user_id
+            const userRequestsReceived = userRequests.some(
+              (req) => req.sender_id === item.item.user_id
             );
+
+            const userRequestsSent = userRequests.some(
+              (req) => req.receiver_id === item.item.user_id
+            );
+
             return (
               <View
                 key={item.item.user_id}
@@ -236,19 +279,59 @@ const find = () => {
                   <SubHeaderText style={{ fontSize: 15 }}>
                     {item.item.name}
                   </SubHeaderText>
+                  <BodyText style={{ color: colors.gray, marginBottom: 5 }}>
+                    {item.item.email}
+                  </BodyText>
                   <BodyText style={{ color: colors.gray }}>
                     Distance: {item.item.distance} km
                   </BodyText>
                 </View>
-                {isRequestSent ? (
+                {userRequestsReceived && (
+                  <>
+                    <TouchableRipple
+                      borderless
+                      style={{ borderRadius: 100 }}
+                      onPress={() => console.log("PRESSED")}
+                    >
+                      <AntDesign
+                        name="close"
+                        size={24}
+                        color={colors.primary.normal}
+                      />
+                    </TouchableRipple>
+                    <TouchableRipple
+                      borderless
+                      style={{ borderRadius: 100 }}
+                      onPress={() =>
+                        onRequestAccept({
+                          receiver_id: currentUser?.user_id,
+                          sender_id: item.item.user_id,
+                        })
+                      }
+                    >
+                      <AntDesign
+                        name="check"
+                        size={24}
+                        color={colors.primary.normal}
+                      />
+                    </TouchableRipple>
+                  </>
+                )}
+                {userRequestsSent && (
                   <TouchableRipple
                     borderless
                     style={{ borderRadius: 100, padding: 5 }}
-                    onPress={() => console.log("PRESSED")}
+                    onPress={() =>
+                      onRemoveRequest({
+                        sender_id: currentUser?.user_id,
+                        receiver_id: item.item.user_id,
+                      })
+                    }
                   >
                     <Feather name="x" size={24} color={colors.primary.normal} />
                   </TouchableRipple>
-                ) : (
+                )}
+                {!userRequestsReceived && !userRequestsSent && (
                   <TouchableRipple
                     borderless
                     style={{ borderRadius: 100, padding: 5 }}

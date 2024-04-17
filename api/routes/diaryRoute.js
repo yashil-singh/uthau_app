@@ -155,7 +155,7 @@ router.post("/get-food-log", strictVerifyToken, async (req, res) => {
         AND
             fd.date = $2
         GROUP BY
-            lf.meal_type;
+            lf.meal_type
       `,
       [user_id, date]
     );

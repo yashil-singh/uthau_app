@@ -142,6 +142,26 @@ export const useUsers = () => {
     }
   };
 
+  const getUserRequests = async ({ user_id }) => {
+    try {
+      const response = await axios.get(
+        `${apiURL}/users/friends/requests/${user_id}`
+      );
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        requests: data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
   const getUserRequestReceived = async ({ lat, lng, radius, user_id }) => {
     try {
       const reponse = await axios.get(
@@ -216,6 +236,30 @@ export const useUsers = () => {
     }
   };
 
+  const removeRequest = async ({ sender_id, receiver_id }) => {
+    try {
+      const response = await axios.post(
+        `${apiURL}/users/friends/requests/remove`,
+        {
+          sender_id,
+          receiver_id,
+        }
+      );
+      const data = response?.data;
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      console.log("🚀 ~ useUsers.js sendRequest error:", error);
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
   const acceptRequest = async ({ sender_id, receiver_id }) => {
     try {
       const response = await axios.post(
@@ -234,6 +278,69 @@ export const useUsers = () => {
       };
     } catch (error) {
       console.log("🚀 ~ useUsers.js acceptRequest error:", error);
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const rejectRequest = async ({ sender_id, receiver_id }) => {
+    try {
+      const response = await axios.post(
+        `${apiURL}/users/friends/requests/reject`,
+        {
+          sender_id,
+          receiver_id,
+        }
+      );
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const removeFriend = async ({ sender_id, receiver_id }) => {
+    try {
+      const response = await axios.post(`${apiURL}/users/friends/remove`, {
+        sender_id,
+        receiver_id,
+      });
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const getPartners = async ({ id, id2 }) => {
+    try {
+      const response = await axios.get(`${apiURL}/users/friends/${id}/${id2}`);
+
+      const data = response?.data;
+
+      return {
+        success: true,
+        partners: data,
+      };
+    } catch (error) {
       return {
         success: false,
         message: error.response?.data.message,
@@ -389,11 +496,16 @@ export const useUsers = () => {
     getUserRequestSent,
     sendRequest,
     acceptRequest,
+    rejectRequest,
     getUserEntries,
     getWeightLogs,
     logSteps,
     getStepLogs,
     onArScan,
     getArPoints,
+    removeRequest,
+    getUserRequests,
+    removeFriend,
+    getPartners,
   };
 };

@@ -6,7 +6,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import MainContainer from "../../../../components/MainContainer";
 import {
   BodyText,
@@ -30,7 +30,7 @@ const index = () => {
   const { user } = useAuthContext();
   const { getDecodedToken } = useDecode();
 
-  const [currentUser, setCurrentUser] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const fetchDecodedToken = async () => {
@@ -52,7 +52,7 @@ const index = () => {
 
   const [location, setLocation] = useState(null);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   //Modal related states
   const [openErrorModal, setOpenErrorModal] = useState(false);
@@ -69,24 +69,26 @@ const index = () => {
         return;
       }
       let location = await Location.getCurrentPositionAsync({});
+
       setLocation(location);
     };
     getLocationPermission();
   }, []);
 
-  useEffect(() => {
-    setIsLoading(true);
-    const getFriends = async () => {
+  const getFriends = async () => {
+    if (currentUser) {
       const response = await getAllFriends({ user_id: currentUser?.user_id });
 
       if (response.success) {
         const connections = response.data;
         setFriends(connections.data);
+        setIsLoading(false);
       }
-    };
+    }
+  };
 
-    const getRequests = async () => {
-      console.log(currentUser);
+  const getRequests = async () => {
+    if (currentUser) {
       const lat = location?.coords.latitude;
       const lng = location?.coords.longitude;
       const radius = userRadius;
@@ -99,16 +101,17 @@ const index = () => {
 
       if (response.success) {
         setRequests(response.requests);
+        setIsLoading(false);
       }
-    };
+    }
+  };
 
-    getFriends();
-    getRequests();
-
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-  }, [currentUser, location]);
+  useFocusEffect(
+    useCallback(() => {
+      getFriends();
+      getRequests();
+    }, [currentUser, location])
+  );
 
   return (
     <MainContainer padding={15} gap={15}>

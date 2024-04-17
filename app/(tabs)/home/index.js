@@ -5,8 +5,10 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
+  Linking,
   Modal,
   Platform,
+  Pressable,
   Text,
   View,
 } from "react-native";
@@ -35,12 +37,10 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import InputFields from "../../../components/InputFields";
 import StyledButton from "../../../components/StyledButton";
 import { useUsers } from "../../../hooks/useUsers";
-import { format } from "date-fns";
+import { format, formatDate } from "date-fns";
 import useDecode from "../../../hooks/useDecode";
-import Toast from "../../../components/Toast";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import useGym from "../../../hooks/useGym";
-import { calculateDays } from "../../../helpers/calculateDaysLeft";
+import { requestPermission } from "react-native-health-connect";
 
 const index = () => {
   const { user } = useAuthContext();
@@ -49,7 +49,6 @@ const index = () => {
   const { getWeightLogs, logWeight, logSteps } = useUsers();
 
   const [mealTotals, setMealTotals] = useState(null);
-  const currentDate = dayjs();
 
   const [isHealthDataGranted, setIsHealthDataGranted] = useState(false);
 
@@ -58,6 +57,42 @@ const index = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const { getDecodedToken } = useDecode();
   const [ishealthDataLoading, setIshealthDataLoading] = useState(true);
+
+  const [openWeightModal, setOpenWeightModal] = useState(false);
+  const [responseMessage, setResponseMessage] = useState("");
+  const [weight, setWeight] = useState("");
+
+  const [logDate, setLogDate] = useState(new Date());
+
+  const [openDatePicker, setOpenDatePicker] = useState(false);
+
+  const screenWidth = Dimensions.get("window").width;
+
+  const [isWeightInvalid, setIsWeightInvalid] = useState(false);
+  const [invalidWeightMessage, setInvalidWeightMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDisabled, setIsDisabled] = useState(false);
+
+  // States related to toast
+  const [openToast, setOpenToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("");
+
+  const [calories, setCalories] = useState("");
+  const [steps, setSteps] = useState(null);
+
+  const [weightLogs, setWeightLogs] = useState([]);
+  const [lineChartData, setLineChartData] = useState([]);
+
+  const [date, setDate] = useState(new Date());
+
+  const [totalCalorieIntake, setTotalCalorieIntake] = useState(0);
+
+  const [appPresent, setAppPresent] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState(false);
+
+  const [openPermissionInfoModal, setOpenPermissionInfoModal] = useState(false);
+  const [openAppInfoModal, setOpenAppInfoModal] = useState(false);
 
   useEffect(() => {
     const fetchDecodedToken = async () => {
@@ -71,67 +106,94 @@ const index = () => {
     fetchDecodedToken();
   }, [user]);
 
-  let totalCaloriesSum = 0;
-
-  function formatDate(date) {
-    let current = new Date(date);
-    let year = current.getFullYear();
-    let month = current.getMonth() + 1;
-    let day = current.getDate();
-    month = month < 10 ? `0${month}` : month;
-    day = day < 10 ? `0${day}` : day;
-
-    return `${year}-${month}-${day}`;
-  }
-
-  const updateCalories = async () => {
-    const date = currentDate.format("YYYY-MM-DD");
-
-    const response = await getLoggedFood({
-      user_id: currentUser?.user_id,
-      date: date,
-    });
-
-    if (response.success) {
-      setMealTotals(response.data.mealTotals);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      updateCalories();
-    }, [])
-  );
-
-  const [openWeightModal, setOpenWeightModal] = useState(false);
-  const [responseMessage, setResponseMessage] = useState("");
-  const [weight, setWeight] = useState("");
-
-  const [logDate, setLogDate] = useState(new Date());
-
-  const [openDatePicker, setOpenDatePicker] = useState(false);
-
-  // Calculate the sum of total_calories using forEach
-  mealTotals?.forEach((item) => {
-    const numericCalories = parseFloat(item?.total_calories);
-    totalCaloriesSum += isNaN(numericCalories) ? 0 : numericCalories;
-  });
-
-  const [date, setDate] = useState(dayjs());
-
+  // Change Time
   useEffect(() => {
     const interval = setInterval(() => {
-      setDate(dayjs());
+      setDate(new Date());
     }, 1000 * 60);
 
     return () => clearInterval(interval);
   }, []);
 
-  const [calories, setCalories] = useState("");
-  const [steps, setSteps] = useState("");
+  // Calorie intake related functions
 
-  const [weightLogs, setWeightLogs] = useState([]);
-  const [lineChartData, setLineChartData] = useState([]);
+  const fetchCalorieIntake = async () => {
+    if (currentUser) {
+      const date = formatDate(new Date(), "yyyy-MM-dd");
+
+      const response = await getLoggedFood({
+        user_id: currentUser?.user_id,
+        date: date,
+      });
+
+      const mealTotals = response.data.mealTotals;
+
+      if (response.success) {
+        const totalCalories = mealTotals.reduce(
+          (total, meal) => total + meal.total_calories,
+          0
+        );
+
+        setMealTotals(mealTotals);
+        setTotalCalorieIntake(totalCalories);
+      }
+    }
+  };
+
+  // Health data related functions
+
+  const onLogSteps = async ({ steps }) => {
+    if (currentUser) {
+      if (!steps) {
+        return;
+      }
+
+      await logSteps({
+        user_id: currentUser?.user_id,
+        steps: steps,
+      });
+    }
+  };
+
+  const fetchHealthData = async () => {
+    if (currentUser) {
+      setIshealthDataLoading(true);
+      const values = await getAndroidData();
+
+      if (values.success) {
+        onLogSteps({ steps: values.totalSteps });
+        setCalories(values.totalCalories);
+        setSteps(values.totalSteps);
+        setIsHealthDataGranted(true);
+        setAppPresent(true);
+        setPermissionGranted(true);
+      } else {
+        setIsHealthDataGranted(false);
+
+        if (!values.appPresent) {
+          setAppPresent(false);
+        } else if (!values.permission) {
+          setAppPresent(true);
+          setPermissionGranted(false);
+        } else {
+          return;
+        }
+        setIshealthDataLoading(false);
+      }
+    }
+  };
+
+  const onOpenInfoModal = () => {
+    if (!appPresent) {
+      setOpenAppInfoModal(true);
+    } else if (!permissionGranted) {
+      setOpenPermissionInfoModal(true);
+    } else {
+      return;
+    }
+  };
+
+  // Weight log related functions
 
   const fetchWeightLogs = async () => {
     if (currentUser) {
@@ -152,67 +214,6 @@ const index = () => {
       }
     }
   };
-
-  useEffect(() => {
-    fetchWeightLogs();
-  }, [currentUser, openWeightModal]);
-
-  const onLogSteps = async () => {
-    if (currentUser && !ishealthDataLoading) {
-      const response = await logSteps({
-        user_id: currentUser?.user_id,
-        steps: steps,
-      });
-      console.log("🚀 ~ response:", response);
-    }
-  };
-
-  useFocusEffect(() => {
-    onLogSteps();
-  });
-
-  useEffect(() => {
-    const fetchHealthData = async () => {
-      setIshealthDataLoading(true);
-      const values = await getAndroidData();
-
-      if (!values.success) {
-        setIsHealthDataGranted(false);
-      } else {
-        setCalories(values.totalCalories);
-        setSteps(values.totalSteps);
-        setIsHealthDataGranted(true);
-      }
-      setIshealthDataLoading(false);
-    };
-
-    fetchHealthData();
-  }, []);
-
-  const onDateChange = ({ type }, selectedDate) => {
-    if (type == "set") {
-      const currentDate = selectedDate;
-
-      if (Platform.OS === "android") {
-        setOpenDatePicker(false);
-        setLogDate(currentDate);
-      }
-    } else {
-      setOpenDatePicker(false);
-    }
-  };
-
-  const screenWidth = Dimensions.get("window").width;
-
-  const [isWeightInvalid, setIsWeightInvalid] = useState(false);
-  const [invalidWeightMessage, setInvalidWeightMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDisabled, setIsDisabled] = useState(false);
-
-  // States related to toast
-  const [openToast, setOpenToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState("");
 
   const onLogWeight = async () => {
     setResponseMessage("");
@@ -259,6 +260,47 @@ const index = () => {
     setIsDisabled(false);
   };
 
+  useEffect(() => {
+    fetchWeightLogs();
+  }, [currentUser, openWeightModal]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchCalorieIntake();
+      fetchHealthData();
+    }, [currentUser])
+  );
+
+  // Change date staate when selecting a new date
+
+  const onDateChange = ({ type }, selectedDate) => {
+    if (type == "set") {
+      const currentDate = selectedDate;
+
+      if (Platform.OS === "android") {
+        setOpenDatePicker(false);
+        setLogDate(currentDate);
+      }
+    } else {
+      setOpenDatePicker(false);
+    }
+  };
+
+  const openPermissionScreen = async () => {
+    const permissionGranted = await requestPermission(
+      [
+        { accessType: "read", recordType: "ActiveCaloriesBurned" },
+        { accessType: "read", recordType: "Steps" },
+      ],
+      "com.google.android.apps.healthdata"
+    );
+
+    if (permissionGranted.length === 2) {
+      fetchHealthData();
+      setOpenPermissionInfoModal(false);
+    }
+  };
+
   return (
     <>
       {isPageLoading ? (
@@ -268,7 +310,7 @@ const index = () => {
           <ActivityIndicator color={colors.primary.normal} size={"large"} />
         </View>
       ) : (
-        <SafeAreaView style={{ paddingHorizontal: 5 }}>
+        <SafeAreaView>
           <Modal
             transparent
             animationType="fade"
@@ -311,7 +353,7 @@ const index = () => {
                 <StyledDatePicker
                   title="Date"
                   placeholder={"Date"}
-                  value={formatDate(logDate)}
+                  value={formatDate(new Date(logDate), "yyyy-MM-dd")}
                   onPress={() => setOpenDatePicker(true)}
                   isEditable={false}
                 />
@@ -365,7 +407,136 @@ const index = () => {
               </View>
             </View>
           </Modal>
-          <KeyboardAwareScrollView showsVerticalScrollIndicator={false}>
+          <Modal
+            transparent
+            animationType="fade"
+            visible={openPermissionInfoModal}
+            onDismiss={() => setOpenPermissionInfoModal(false)}
+            onRequestClose={() => setOpenPermissionInfoModal(false)}
+          >
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(0,0,0,0.5)",
+                padding: 15,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <View
+                style={{
+                  padding: 15,
+                  backgroundColor: colors.white,
+                  width: "100%",
+                  borderRadius: 8,
+                  gap: 15,
+                }}
+              >
+                <HeaderText>Permission Requirement</HeaderText>
+                <BodyText>
+                  Uthau needs permission for this feature. Please enable it from
+                  health connect.
+                </BodyText>
+                <HeaderText>Additional Steps</HeaderText>
+                <BodyText>
+                  1. Make sure to connect your smart watch's app to health
+                  connect.
+                </BodyText>
+                <BodyText>
+                  2. If health connect directly doen't support your smart
+                  watch's app, try linking it to Google fit first and then
+                  connect Google Fit to health connect if you haven't already.
+                </BodyText>
+                <BodyText>
+                  Note: Some apps supported by Health Connect: Google Fit,
+                  Fitbit, OnHealth, etc.
+                </BodyText>
+
+                <StyledButton
+                  onPress={openPermissionScreen}
+                  title={"Grant Permissions"}
+                />
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: 3,
+                  }}
+                >
+                  <BodyText
+                    style={{
+                      fontSize: 10,
+                    }}
+                  >
+                    Nothing happening? Make sure Health Connect is installed.
+                  </BodyText>
+                  <Pressable
+                    onPress={() => {
+                      Linking.openURL(
+                        "market://details?id=com.google.android.apps.healthdata"
+                      );
+                      setOpenPermissionInfoModal(false);
+                    }}
+                    style={{ justifyContent: "center", alignItems: "center" }}
+                  >
+                    <BodyText
+                      style={{ color: colors.info.normal, fontSize: 10 }}
+                    >
+                      Click Here
+                    </BodyText>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+          <Modal
+            transparent
+            animationType="fade"
+            visible={openAppInfoModal}
+            onDismiss={() => setOpenAppInfoModal(false)}
+            onRequestClose={() => setOpenAppInfoModal(false)}
+          >
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(0,0,0,0.5)",
+                padding: 15,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <View
+                style={{
+                  padding: 15,
+                  backgroundColor: colors.white,
+                  width: "100%",
+                  borderRadius: 8,
+                  gap: 15,
+                }}
+              >
+                <HeaderText>Health Connect Requirement</HeaderText>
+                <BodyText>
+                  The Health Connect app is required for this feature. Please
+                  install it from the Playstore.
+                </BodyText>
+                <StyledButton
+                  onPress={() => {
+                    Linking.openURL(
+                      "market://details?id=com.google.android.apps.healthdata"
+                    );
+                    setOpenAppInfoModal(false);
+                  }}
+                  title={"Open Playstore"}
+                />
+              </View>
+            </View>
+          </Modal>
+          <KeyboardAwareScrollView
+            showsVerticalScrollIndicator={false}
+            style={{ paddingTop: 15 }}
+          >
             <Animated.View
               entering={FadeInDown}
               style={{
@@ -421,10 +592,10 @@ const index = () => {
                       textAlign: "right",
                     }}
                   >
-                    {date.format("hh:mm A")}
+                    {formatDate(date, "hh:mm aa")}
                   </HeaderText>
                   <BodyText style={{ color: colors.gray }}>
-                    {date.format("dddd, MMMM D")}
+                    {formatDate(date, "E, MMMM d yyyy")}
                   </BodyText>
                 </View>
               </Animated.View>
@@ -464,7 +635,11 @@ const index = () => {
                     >
                       <View>
                         <CircularProgress
-                          value={totalCaloriesSum}
+                          value={
+                            totalCalorieIntake <= currentUser?.calorie_intake
+                              ? totalCalorieIntake
+                              : currentUser?.calorie_intake
+                          }
                           maxValue={currentUser?.calorie_intake}
                           radius={78}
                           activeStrokeColor={colors.primary.normal}
@@ -511,7 +686,7 @@ const index = () => {
                     </View>
                   ) : (
                     <BodyText style={{ textAlign: "center" }}>
-                      {totalCaloriesSum} kcals completed
+                      {totalCalorieIntake} kcals completed
                     </BodyText>
                   )}
                 </Animated.View>
@@ -582,7 +757,7 @@ const index = () => {
                         gap: 10,
                       }}
                     >
-                      <View
+                      <Pressable
                         style={{
                           backgroundColor: colors.secondary.normal,
                           flex: 1,
@@ -590,6 +765,7 @@ const index = () => {
                           padding: 15,
                           width: "100%",
                         }}
+                        onPress={onOpenInfoModal}
                       >
                         <View style={{ alignItems: "flex-end" }}>
                           <Image source={stepsImage} width={60} height={60} />
@@ -604,8 +780,8 @@ const index = () => {
                             Connect to track {"\n"} steps
                           </HeaderText>
                         </View>
-                      </View>
-                      <View
+                      </Pressable>
+                      <Pressable
                         style={{
                           backgroundColor: colors.warning.normal,
                           flex: 1,
@@ -613,6 +789,7 @@ const index = () => {
                           padding: 15,
                           width: "100%",
                         }}
+                        onPress={onOpenInfoModal}
                       >
                         <View style={{ alignItems: "flex-end" }}>
                           <FontAwesome5
@@ -631,7 +808,7 @@ const index = () => {
                             Connect to track calories
                           </HeaderText>
                         </View>
-                      </View>
+                      </Pressable>
                     </View>
                   </>
                 )}
@@ -647,6 +824,7 @@ const index = () => {
                   padding: 15,
                   borderRadius: 10,
                   gap: 15,
+                  marginBottom: 15,
                 }}
               >
                 <View

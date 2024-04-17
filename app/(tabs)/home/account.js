@@ -179,7 +179,9 @@ const account = () => {
               >
                 <FontAwesome name="birthday-cake" size={22} color="black" />
                 <HeaderText>Date of Birth:</HeaderText>
-                <BodyText>{format(userDetails?.dob, "d MMMM yyyy")}</BodyText>
+                <BodyText>
+                  {userDetails.dob && format(userDetails?.dob, "d MMMM yyyy")}
+                </BodyText>
               </View>
 
               <View

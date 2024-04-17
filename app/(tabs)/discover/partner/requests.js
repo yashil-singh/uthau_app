@@ -18,19 +18,26 @@ import {
 } from "../../../../components/StyledText";
 import MainContainer from "../../../../components/MainContainer";
 import { AntDesign } from "@expo/vector-icons";
-import { TouchableRipple } from "react-native-paper";
+import { Portal, Snackbar, TouchableRipple } from "react-native-paper";
 import { userRadius } from "../../../../helpers/constants";
 import useDecode from "../../../../hooks/useDecode";
 
 const requests = () => {
   const { user } = useAuthContext();
-  const { getUserRequestReceived, acceptRequest } = useUsers();
+  const { getUserRequestReceived, acceptRequest, rejectRequest } = useUsers();
 
   const { getDecodedToken } = useDecode();
 
-  const [isPageLoading, setIsPageLoading] = useState(true);
-
   const [currentUser, setCurrentUser] = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [location, setLocation] = useState(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [openToast, setOpenToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     const fetchDecodedToken = async () => {
@@ -38,27 +45,39 @@ const requests = () => {
 
       if (response.success) {
         setCurrentUser(response?.user);
-        setIsPageLoading(false);
       }
     };
 
     fetchDecodedToken();
   }, [user]);
 
-  const [requests, setRequests] = useState([]);
-  const [location, setLocation] = useState(null);
-
-  const [isLoading, setIsLoading] = useState(false);
-
   const onRequestAccept = async ({ sender_id, receiver_id }) => {
     const resposne = await acceptRequest({ receiver_id, sender_id });
-    console.log("🚀 ~ requests onRequestAccept resposne:", resposne);
+
+    setOpenToast(true);
+    setToastMessage(resposne.message);
+
+    if (resposne.success) {
+      getRequests();
+    }
+  };
+
+  const onRequestReject = async ({ sender_id, receiver_id }) => {
+    const resposne = await rejectRequest({ receiver_id, sender_id });
+
+    setOpenToast(true);
+    setToastMessage(resposne.message);
+
+    if (resposne.success) {
+      getRequests();
+    }
   };
 
   useEffect(() => {
     const getLocation = async () => {
       try {
         let location = await Location.getCurrentPositionAsync({});
+        console.log("🚀 ~ location:", location);
 
         setLocation(location);
       } catch (error) {
@@ -69,30 +88,47 @@ const requests = () => {
     getLocation();
   }, []);
 
-  useEffect(() => {
-    const getRequests = async () => {
-      if (currentUser) {
-        const lat = location?.coords.latitude;
-        const lng = location?.coords.longitude;
-        const radius = userRadius;
-        const response = await getUserRequestReceived({
-          user_id: currentUser?.user_id,
-          lat,
-          lng,
-          radius,
-        });
+  const getRequests = async () => {
+    if (currentUser && location) {
+      const lat = location?.coords.latitude;
+      const lng = location?.coords.longitude;
+      const radius = userRadius;
+      const response = await getUserRequestReceived({
+        user_id: currentUser?.user_id,
+        lat,
+        lng,
+        radius,
+      });
 
-        if (response.success) {
-          setRequests(response.requests);
-        }
+      if (response.success) {
+        setRequests(response.requests);
       }
-    };
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     getRequests();
   }, [location]);
 
   return (
     <MainContainer padding={15}>
+      <Portal>
+        <Snackbar
+          visible={openToast}
+          onDismiss={() => setOpenToast(false)}
+          action={{
+            label: "close",
+            labelStyle: {
+              color: colors.primary.normal,
+            },
+          }}
+          duration={2000}
+          style={{ backgroundColor: colors.white }}
+        >
+          <BodyText>{toastMessage}</BodyText>
+        </Snackbar>
+      </Portal>
       {isLoading ? (
         <View
           style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
@@ -104,6 +140,8 @@ const requests = () => {
           data={requests}
           key={(index) => index}
           showsVerticalScrollIndicator={false}
+          refreshing={isRefreshing}
+          onRefresh={() => getRequests()}
           renderItem={(item) => (
             <TouchableOpacity
               key={item.item.user_id}
@@ -137,6 +175,9 @@ const requests = () => {
                 <SubHeaderText style={{ fontSize: 15 }}>
                   {item.item.name}
                 </SubHeaderText>
+                <BodyText style={{ color: colors.gray, marginBottom: 5 }}>
+                  {item.item?.email}
+                </BodyText>
                 <BodyText style={{ color: colors.gray }}>
                   {item.item?.distance} km away
                 </BodyText>
@@ -145,7 +186,12 @@ const requests = () => {
                 <TouchableRipple
                   borderless
                   style={{ borderRadius: 100, padding: 5 }}
-                  onPress={() => console.log("PRESSED")}
+                  onPress={() =>
+                    onRequestReject({
+                      receiver_id: currentUser?.user_id,
+                      sender_id: item.item.user_id,
+                    })
+                  }
                 >
                   <AntDesign
                     name="close"

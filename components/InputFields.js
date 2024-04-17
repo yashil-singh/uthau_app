@@ -47,7 +47,7 @@ const InputFields = ({
             fontSize: 14,
             flex: 1,
             color: colors.gray,
-            textAlignVertical: "top",
+            textAlignVertical: isMultiline ? "top" : "center",
           }}
           placeholder={placeholder}
           secureTextEntry={isSecure}

@@ -256,7 +256,6 @@ const searchFood = () => {
       }
       setOpenToast(true);
 
-      closeToast();
       setOpenModal(false);
       setAddError("Cannot complete this request at the moment.");
       setIsLogDisabled(false);
@@ -269,7 +268,7 @@ const searchFood = () => {
     setCarbs(0);
     setFat(0);
     setProtein(0);
-    setQuantity(1);
+    setQuantity("1");
     setSelectedMeal(null);
     setSelectedServing(null);
     setOpenModal(false);

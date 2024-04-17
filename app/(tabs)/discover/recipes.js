@@ -685,6 +685,7 @@ const recipes = () => {
               )}
               renderItem={(item) => (
                 <CardOption
+                  showBookmark={true}
                   style={{ marginBottom: 5 }}
                   key={item.index}
                   gifUrl={item.item.recipe.image}

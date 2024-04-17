@@ -1,4 +1,4 @@
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { colors } from "../../helpers/theme";
 import DropdownPicker from "../../components/DropdownPicker";
@@ -6,18 +6,34 @@ import InputFields from "../../components/InputFields";
 import { Controller, useForm } from "react-hook-form";
 import { ERROR_MESSAGES } from "../../helpers/constants";
 import StyledButton from "../../components/StyledButton";
-import { BodyText } from "../../components/StyledText";
+import { BodyText, HeaderText } from "../../components/StyledText";
 import { useRegisterContext } from "../../hooks/useRegisterContext";
+import { useState } from "react";
+import StyledDatePicker from "../../components/StyledDatePicker";
+import { formatDate } from "date-fns";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 const about = () => {
   const { dispatch } = useRegisterContext();
   const router = useRouter();
 
+  const [openDatePicker, setOpenDatePicker] = useState(false);
+  const [date, setDate] = useState(new Date());
+
   const {
     control,
     formState: { errors, isSubmitting },
     handleSubmit,
-  } = useForm();
+    setValue,
+  } = useForm({
+    mode: "onSubmit",
+    defaultValues: {
+      dob: "",
+      gender: null,
+      height: "",
+      weight: "",
+    },
+  });
 
   const genderOptions = [
     { label: "Select your gender", value: null },
@@ -30,6 +46,25 @@ const about = () => {
     router.push("/goal");
   };
 
+  const onDateChange = ({ type }, selectedDate) => {
+    if (type == "set") {
+      const currentDate = selectedDate;
+      setDate(currentDate);
+
+      if (Platform.OS === "android") {
+        setValue("dob", formatDate(new Date(currentDate), "yyyy-MM-dd"));
+        setOpenDatePicker(false);
+      }
+    } else {
+      setOpenDatePicker(false);
+    }
+  };
+
+  const onIOSDateConfrim = () => {
+    setValue("dob", formatDate(currentDate, "yyyy-MM-dd"));
+    setOpenDatePicker(false);
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -40,32 +75,59 @@ const about = () => {
         justifyContent: "space-between",
       }}
     >
-      <View style={{ gap: 15 }}>
+      <View style={{ flex: 1, gap: 15 }}>
         <BodyText style={{ color: colors.gray, fontSize: 16 }}>
           Please answer these correctly.
         </BodyText>
 
         <Controller
           control={control}
-          name="age"
+          name="dob"
           rules={{
             required: { value: true, message: ERROR_MESSAGES.REQUIRED },
-            min: { value: 5, message: "Age must be at least 5 years." },
-            max: { value: 100, message: "Age must be at most 100 years." },
           }}
           render={({ field: { onChange, value } }) => (
-            <InputFields
-              title="Age"
-              placeholder="Enter your age"
-              type={"numeric"}
-              value={value}
-              keyboardType="numeric"
-              isInvalid={errors.age ? true : false}
-              onChangeText={onChange}
-              errorText={errors.age?.message}
-            />
+            <>
+              <StyledDatePicker
+                title="Date of Birth"
+                placeholder={"Select your date of birth"}
+                value={value}
+                isInvalid={errors.height ? true : false}
+                onChangeText={onChange}
+                errorText={errors.height?.message}
+                onPress={() => setOpenDatePicker(true)}
+                isEditable={false}
+              />
+            </>
           )}
         />
+
+        {openDatePicker && (
+          <DateTimePicker
+            mode="date"
+            display="calendar"
+            value={date}
+            onChange={onDateChange}
+            maximumDate={new Date().setFullYear(new Date().getFullYear() - 5)}
+          />
+        )}
+        {openDatePicker && Platform.OS === "ios" && (
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+            }}
+          >
+            <Pressable onPress={() => setOpenDatePicker(false)}>
+              <HeaderText>Cancel</HeaderText>
+            </Pressable>
+            <StyledButton
+              style={{ width: "50%" }}
+              title={"Confirm"}
+              onPress={onIOSDateConfrim}
+            ></StyledButton>
+          </View>
+        )}
 
         <Controller
           control={control}

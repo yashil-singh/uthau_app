@@ -48,9 +48,10 @@ export default function _layout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary.normal,
+        tabBarInactiveTintColor: colors.gray,
         tabBarStyle: {
           borderWidth: 1,
-          borderColor: "#e3e3e3",
+          borderColor: colors.lightGray,
           paddingTop: 5,
         },
         tabBarLabelStyle: {
@@ -66,18 +67,14 @@ export default function _layout() {
         options={{
           tabBarLabel: "Home",
           headerShown: false,
-          tabBarIcon: ({ focused }) =>
+          tabBarIcon: ({ focused, color }) =>
             focused ? (
-              <MaterialCommunityIcons
-                name="home"
-                size={24}
-                color={colors.primary.normal}
-              />
+              <MaterialCommunityIcons name="home" size={24} color={color} />
             ) : (
               <MaterialCommunityIcons
                 name="home-outline"
                 size={24}
-                color={colors.primary.normal}
+                color={color}
               />
             ),
         }}
@@ -87,15 +84,11 @@ export default function _layout() {
         options={{
           tabBarLabel: "Diary",
           headerShown: false,
-          tabBarIcon: ({ focused }) =>
+          tabBarIcon: ({ focused, color }) =>
             focused ? (
-              <Ionicons name="book" size={24} color={colors.primary.normal} />
+              <Ionicons name="book" size={24} color={color} />
             ) : (
-              <Ionicons
-                name="book-outline"
-                size={24}
-                color={colors.primary.normal}
-              />
+              <Ionicons name="book-outline" size={24} color={color} />
             ),
         }}
       />
@@ -104,19 +97,11 @@ export default function _layout() {
         options={{
           tabBarLabel: "Discover",
           headerShown: false,
-          tabBarIcon: ({ focused }) =>
+          tabBarIcon: ({ focused, color }) =>
             focused ? (
-              <Ionicons
-                name="compass"
-                size={24}
-                color={colors.primary.normal}
-              />
+              <Ionicons name="compass" size={24} color={color} />
             ) : (
-              <Ionicons
-                name="compass-outline"
-                size={24}
-                color={colors.primary.normal}
-              />
+              <Ionicons name="compass-outline" size={24} color={color} />
             ),
         }}
       />
@@ -125,18 +110,14 @@ export default function _layout() {
         options={{
           tabBarLabel: "Gym",
           headerShown: false,
-          tabBarIcon: ({ focused }) =>
+          tabBarIcon: ({ focused, color }) =>
             focused ? (
-              <MaterialCommunityIcons
-                name="arm-flex"
-                size={25}
-                color={colors.primary.normal}
-              />
+              <MaterialCommunityIcons name="arm-flex" size={25} color={color} />
             ) : (
               <MaterialCommunityIcons
                 name="arm-flex-outline"
                 size={25}
-                color={colors.primary.normal}
+                color={color}
               />
             ),
         }}

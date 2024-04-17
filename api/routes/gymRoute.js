@@ -4,6 +4,7 @@ const router = express.Router();
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const axios = require("axios");
 
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -20,6 +21,11 @@ function calculateExpiryDate(planDuration) {
   expiryDate.setMonth(expiryDate.getMonth() + planDuration);
   return formatDate(expiryDate);
 }
+
+const convertMetric = (numberToconvert, numOfServings) => {
+  if (!numberToconvert || !numOfServings) return null;
+  return Math.round(numberToconvert / numOfServings);
+};
 
 const sendMail = async (email, subject, body) => {
   const transporter = nodemailer.createTransport({
@@ -46,6 +52,14 @@ const sendMail = async (email, subject, body) => {
     return false;
   }
 };
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
 
 // Endpoint to create announcements
 router.post("/announcement/create", async (req, res) => {
@@ -120,7 +134,6 @@ router.get("/announcement", async (req, res) => {
       comp_participants cp ON fc.fitness_competition_id = cp.fitness_competition_id
   LEFT JOIN 
       payments p ON cp.payment_id = p.payment_id AND p.status = 'Completed'
-  
   GROUP BY 
       fc.fitness_competition_id
   ORDER BY
@@ -1590,6 +1603,513 @@ router.post("/member/activate", async (req, res) => {
       .json({ message: "Coverted to member successfully.", token: token });
   } catch (error) {
     console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.get("/exercise/recommendations/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const memberCheck = await pool.query(
+      `SELECT * FROM members WHERE member_id = $1`,
+      [id]
+    );
+    if (memberCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const member = memberCheck.rows[0];
+    const expiry_date = new Date(member.expiry_date);
+    const current_date = new Date();
+
+    expiry_date.setHours(0, 0, 0, 0);
+    current_date.setHours(0, 0, 0, 0);
+
+    const isActive = current_date < expiry_date;
+
+    if (!isActive) {
+      return res.status(401).json({
+        message: "Membership expired. Please renew to view recommendations.",
+      });
+    }
+
+    const recommendationCheck = await pool.query(
+      `SELECT * FROM recommendations WHERE member_id = $1 AND recommendation_type = 'exercise' ORDER BY created_at DESC LIMIT 1`,
+      [id]
+    );
+    const recommendation_id = recommendationCheck.rows[0].recommendation_id;
+
+    const result = await pool.query(
+      `SELECT * FROM recommended_exercises WHERE recommendation_id = $1`,
+      [recommendation_id]
+    );
+    const exercises = result.rows;
+
+    return res.status(200).json(exercises);
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.get("/meal/recommendations/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const memberCheck = await pool.query(
+      `SELECT * FROM members WHERE member_id = $1`,
+      [id]
+    );
+    if (memberCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const member = memberCheck.rows[0];
+    const expiry_date = new Date(member.expiry_date);
+    const current_date = new Date();
+
+    expiry_date.setHours(0, 0, 0, 0);
+    current_date.setHours(0, 0, 0, 0);
+
+    const isActive = current_date < expiry_date;
+
+    if (!isActive) {
+      return res.status(401).json({
+        message: "Membership expired. Please renew to view recommendations.",
+      });
+    }
+
+    const recommendationCheck = await pool.query(
+      `SELECT * FROM recommendations WHERE member_id = $1 AND recommendation_type = 'meal' ORDER BY created_at DESC LIMIT 1`,
+      [id]
+    );
+
+    if (recommendationCheck.rowCount <= 0) {
+      return res.status(200).json([]);
+    }
+
+    const recommendation_id = recommendationCheck.rows[0].recommendation_id;
+
+    const result = await pool.query(
+      `SELECT * FROM recommended_recipes WHERE recommendation_id = $1`,
+      [recommendation_id]
+    );
+    const meals = result.rows;
+
+    return res.status(200).json(meals);
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.get("/exercise/bodyPart/recommendations/:id/:part", async (req, res) => {
+  try {
+    const { id, part } = req.params;
+
+    const memberCheck = await pool.query(
+      `SELECT * FROM members WHERE member_id = $1`,
+      [id]
+    );
+    if (memberCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested user was not found." });
+    }
+
+    const member = memberCheck.rows[0];
+    const expiry_date = new Date(member.expiry_date);
+    const current_date = new Date();
+
+    expiry_date.setHours(0, 0, 0, 0);
+    current_date.setHours(0, 0, 0, 0);
+
+    const isActive = current_date < expiry_date;
+
+    if (!isActive) {
+      return res.status(401).json({
+        message: "Membership expired. Please renew to view recommendations.",
+      });
+    }
+
+    const recommendationCheck = await pool.query(
+      `SELECT * FROM recommendations WHERE member_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [id]
+    );
+
+    if (recommendationCheck.rowCount <= 0) {
+      return res.status(200).json([]);
+    }
+
+    const recommendation_id = recommendationCheck.rows[0].recommendation_id;
+
+    const result = await pool.query(
+      `SELECT * FROM recommended_exercises WHERE recommendation_id = $1 AND body_part = $2`,
+      [recommendation_id, part]
+    );
+    const exercises = result.rows;
+
+    return res.status(200).json(exercises);
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.post("/exercise/recommend", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { member_id } = req.body;
+    console.log("🚀 ~ req.body:", req.body);
+
+    if (!member_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const memberCheck = await pool.query(
+      `SELECT * FROM members WHERE member_id = $1`,
+      [member_id]
+    );
+
+    if (memberCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested member was not found." });
+    }
+
+    const member = memberCheck.rows[0];
+    const expiry_date = new Date(member.expiry_date);
+    const current_date = new Date();
+    expiry_date.setHours(0, 0, 0, 0);
+    current_date.setHours(0, 0, 0, 0);
+
+    const isActive = current_date < expiry_date;
+
+    if (!isActive) {
+      return res.status(401).json({
+        message: "Membership expired. Please renew to get recommendations.",
+      });
+    }
+
+    const requestCheck = await pool.query(
+      `SELECT member_id, COUNT(*) AS requests 
+    FROM recommendations 
+    WHERE EXTRACT(MONTH FROM CURRENT_DATE) = EXTRACT(MONTH FROM created_at) 
+    AND member_id = $1
+    AND recommendation_type = 'exercise'
+    GROUP BY member_id`,
+      [member_id]
+    );
+
+    if (requestCheck.rowCount !== 0) {
+      const requestsArray = requestCheck.rows[0];
+      const requests = requestsArray.requests;
+
+      if (requests > 3) {
+        return res
+          .status(429)
+          .json({ message: "To many requests received. Try again later." });
+      }
+    }
+
+    const bodyPartList = [
+      "back",
+      "shoulders",
+      "chest",
+      "cardio",
+      "upper arms",
+      "upper legs",
+    ];
+
+    const recommendations = {
+      back: [],
+      shoulders: [],
+      chest: [],
+      cardio: [],
+      "upper arms": [],
+      "upper legs": [],
+    };
+
+    const userCheck = await pool.query(
+      `SELECT weight_goal
+      FROM users
+      JOIN members ON users.user_id = members.user_id
+      WHERE member_id = $1`,
+      [member_id]
+    );
+
+    if (userCheck.rowCount <= 0) {
+      return res.status(404).json({
+        message: "Account not found. Please create an account to continue.",
+      });
+    }
+    const userGoal = userCheck.rows[0].weight_goal;
+
+    await client.query(`BEGIN`);
+
+    const result = await client.query(
+      `INSERT INTO recommendations (member_id, recommendation_type, goal) VALUES ($1, $2, $3) RETURNING *`,
+      [member_id, "exercise", userGoal]
+    );
+
+    const recommendation_id = result.rows[0].recommendation_id;
+
+    for (const part of bodyPartList) {
+      const split = part.split(" ");
+
+      let query = part;
+      if (split.length > 1) {
+        query = split.join("%20");
+      }
+
+      let offset = 20;
+      if (part === "chest" || part === "back" || part === "shoulders") {
+        offset = 100;
+      }
+
+      const randomOffset = Math.floor(Math.random() * offset) + 1;
+
+      const options = {
+        method: "GET",
+        url: `https://exercisedb.p.rapidapi.com/exercises/bodyPart/${query}`,
+        params: {
+          limit: "30",
+          offset: randomOffset.toString(),
+        },
+        headers: {
+          "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
+          "X-RapidAPI-Host": process.env.RAPIDAPI_EXERCISE_HOST,
+        },
+      };
+
+      const response = await axios.request(options);
+      recommendations[part] = shuffleArray(response.data).slice(0, 10);
+
+      for (const exercise of recommendations[part]) {
+        await client.query(
+          `INSERT INTO recommended_exercises (recommendation_id, name, body_part, equipment, image, target, secondary_muscles, instructions) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            recommendation_id,
+            exercise.name,
+            exercise.bodyPart,
+            exercise.equipment,
+            exercise.gifUrl,
+            exercise.target,
+            exercise.secondaryMuscles,
+            exercise.instructions,
+          ]
+        );
+      }
+    }
+
+    await client.query(`COMMIT`);
+
+    return res.status(200).json({ message: "New recommendations generated." });
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    await client.query(`ROLLBACK`);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
+  }
+});
+
+router.post("/meal/recommend", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { member_id } = req.body;
+    console.log("🚀 ~ req.body:", req.body);
+
+    if (!member_id) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    const memberCheck = await pool.query(
+      `SELECT * FROM members WHERE member_id = $1`,
+      [member_id]
+    );
+
+    if (memberCheck.rowCount <= 0) {
+      return res
+        .status(404)
+        .json({ message: "The requested member was not found." });
+    }
+
+    const member = memberCheck.rows[0];
+    const expiry_date = new Date(member.expiry_date);
+    const current_date = new Date();
+    expiry_date.setHours(0, 0, 0, 0);
+    current_date.setHours(0, 0, 0, 0);
+
+    const isActive = current_date < expiry_date;
+
+    if (!isActive) {
+      return res.status(401).json({
+        message: "Membership expired. Please renew to get recommendations.",
+      });
+    }
+
+    const requestCheck = await pool.query(
+      `SELECT member_id, COUNT(*) AS requests 
+    FROM recommendations 
+    WHERE EXTRACT(MONTH FROM CURRENT_DATE) = EXTRACT(MONTH FROM created_at) 
+    AND member_id = $1
+    AND recommendation_type = 'meal'
+    GROUP BY member_id`,
+      [member_id]
+    );
+
+    if (requestCheck.rowCount !== 0) {
+      const requestsArray = requestCheck.rows[0];
+      const requests = requestsArray.requests;
+
+      if (requests > 3) {
+        return res
+          .status(400)
+          .json({ message: "To many requests received. Try again later." });
+      }
+    }
+
+    const mealType = ["breakfast", "lunch", "dinner"];
+
+    const recommendations = {
+      breakfast: [],
+      lunch: [],
+      dinner: [],
+    };
+
+    const userCheck = await pool.query(
+      `SELECT calorie_intake, weight_goal
+      FROM users
+      JOIN members ON users.user_id = members.user_id
+      WHERE member_id = $1`,
+      [member_id]
+    );
+
+    if (userCheck.rowCount <= 0) {
+      return res.status(404).json({
+        message: "Account not found. Please create an account to continue.",
+      });
+    }
+    const user = userCheck.rows[0];
+    const userGoal = user.weight_goal;
+    const userCalorie = user.calorie_intake;
+
+    const breakfastCalorie = (1 / 6) * userCalorie;
+
+    const lunchCalorie = (3 / 6) * userCalorie;
+
+    const dinnerCalorie = (2 / 6) * userCalorie;
+
+    await client.query(`BEGIN`);
+
+    const result = await client.query(
+      `INSERT INTO recommendations (member_id, recommendation_type, goal) VALUES ($1, $2, $3) RETURNING *`,
+      [member_id, "meal", userGoal]
+    );
+
+    const recommendation_id = result.rows[0].recommendation_id;
+
+    const breakfastOptions = [
+      "Biscuits and cookies",
+      "Bread",
+      "Drinks",
+      "Egg",
+      "Omelet",
+      "Pancake",
+      "Sandwiches",
+      "Salad",
+    ];
+
+    for (const meal of mealType) {
+      let mealTypes = ["Main course"];
+      let dietType = "high-protein";
+
+      if (meal === "breakfast") {
+        mealTypes = breakfastOptions;
+        dietType = "balanced";
+      }
+
+      let calories;
+      if (meal === "breakfast") {
+        calories = breakfastCalorie;
+      } else if (meal === "lunch") {
+        calories = lunchCalorie;
+      } else {
+        calories = dinnerCalorie;
+      }
+
+      const options = {
+        method: "GET",
+        url: "https://edamam-recipe-search.p.rapidapi.com/api/recipes/v2",
+        params: {
+          type: "public",
+          "field[0]": "uri",
+          beta: "true",
+          time: "1+",
+          random: "true",
+          calories: `${calories - 100}-${calories}`,
+          health: "alcohol-free",
+          mealType: mealTypes,
+          diet: `${dietType}`,
+        },
+        headers: {
+          "Accept-Language": "en",
+          "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
+          "X-RapidAPI-Host": process.env.RAPIDAPI_RECIPE_HOST,
+        },
+      };
+
+      const response = await axios.request(options);
+
+      recommendations[meal] = shuffleArray(response.data.hits).slice(0, 7);
+
+      for (const recipe of recommendations[meal]) {
+        await client.query(
+          `INSERT INTO recommended_recipes (recommendation_id, recipe_id, recipe_name, ingredients, servings, cook_time, calories, carbs, protein, fat, instruction_link, img_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            recommendation_id,
+            recipe.recipe.uri.split("#")[1],
+            recipe.recipe.label,
+            recipe.recipe.ingredientLines,
+            recipe.recipe.yield,
+            recipe.recipe.totalTime,
+            Math.round(recipe.recipe.calories / recipe.recipe.yield),
+            Math.round(
+              recipe.recipe.totalNutrients.CHOCDF.quantity / recipe.recipe.yield
+            ),
+            Math.round(
+              recipe.recipe.totalNutrients.PROCNT.quantity / recipe.recipe.yield
+            ),
+            Math.round(
+              recipe.recipe.totalNutrients.FAT.quantity / recipe.recipe.yield
+            ),
+            recipe.recipe.url,
+            recipe.recipe.image,
+          ]
+        );
+      }
+    }
+
+    await client.query(`COMMIT`);
+
+    return res.status(200).json({ message: "New recommendations generated." });
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    await client.query(`ROLLBACK`);
     return res
       .status(500)
       .json({ message: "Internal server error. Try again later." });

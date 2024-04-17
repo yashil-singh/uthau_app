@@ -9,6 +9,7 @@ import useRegister from "../../hooks/useRegister";
 
 const confirmation = () => {
   const { data } = useRegisterContext();
+  console.log("🚀 ~ data:", data);
 
   const { register } = useRegister();
 
@@ -21,7 +22,7 @@ const confirmation = () => {
     name,
     email,
     password,
-    age,
+    dob,
     genderValue,
     height,
     weight,
@@ -40,7 +41,7 @@ const confirmation = () => {
         name,
         email,
         password,
-        age,
+        dob,
         gender,
         height,
         weight,
@@ -85,8 +86,8 @@ const confirmation = () => {
           <BodyText>{email}</BodyText>
         </View>
         <View>
-          <HeaderText>Age:</HeaderText>
-          <BodyText>{age}</BodyText>
+          <HeaderText>Date of Birth:</HeaderText>
+          <BodyText>{dob}</BodyText>
         </View>
         <View>
           <HeaderText>Gender:</HeaderText>

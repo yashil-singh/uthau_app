@@ -3,6 +3,7 @@ import {
   readRecords,
   getSdkStatus,
   SdkAvailabilityStatus,
+  requestPermission,
 } from "react-native-health-connect";
 
 const useHealthData = () => {
@@ -14,9 +15,7 @@ const useHealthData = () => {
         console.log("NO APP avaiable.");
         return {
           success: false,
-          title: "Health Connect Missing",
-          message:
-            "Health connect is not installed yet. Please install it from the playstore.",
+          appPresent: false,
         };
       }
       const isInitialized = await initialize();
@@ -25,9 +24,7 @@ const useHealthData = () => {
         console.log("NOT INITIALIZED.");
         return {
           success: false,
-          title: "Health Connect Missing",
-          message:
-            "Failed to initialze the Health Connect app. Make sure it is installed and up-to-date.",
+          appPresent: false,
         };
       }
 
@@ -48,23 +45,19 @@ const useHealthData = () => {
         // caloriesResult = await readRecords("TotalCaloriesBurned", {
         //   timeRangeFilter: timeRangeFilter,
         // });
-        // console.log("🚀 ~ caloriesResult:", caloriesResult);
 
         activeCalories = await readRecords("ActiveCaloriesBurned", {
           timeRangeFilter: timeRangeFilter,
         });
-        console.log("🚀 ~ activeCalories:", activeCalories);
 
         stepsResult = await readRecords("Steps", {
           timeRangeFilter: timeRangeFilter,
         });
       } catch (error) {
-        console.log("🚀 ~ error:", error);
-
         return {
           success: false,
-          title: "Permission Required",
-          message: "Please grant required permissions from Health Connect.",
+          appPresent: true,
+          permission: false,
         };
       }
 

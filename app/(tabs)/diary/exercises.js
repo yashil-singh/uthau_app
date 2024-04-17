@@ -325,6 +325,7 @@ const exercises = () => {
                   )}
                   renderItem={({ item, index }) => (
                     <CardOption
+                      showBookmark={true}
                       desc={"Targeted muscle(s):"}
                       isSaved={true}
                       title={item.exercise_name}

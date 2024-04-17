@@ -5,6 +5,7 @@ import {
   FlatList,
   Modal,
   KeyboardAvoidingView,
+  Pressable,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
@@ -22,14 +23,13 @@ import { useRouter } from "expo-router";
 import { useAuthContext } from "../../../hooks/useAuthContext";
 import useGym from "../../../hooks/useGym";
 import ErrorModal from "../../../components/ErrorModal";
-import moment from "moment";
 import getDaysLeft from "../../../helpers/getDaysLeft";
 import useDecode from "../../../hooks/useDecode";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Feather } from "react-native-vector-icons";
 import { Portal, Snackbar, TouchableRipple } from "react-native-paper";
 import DropdownPicker from "../../../components/DropdownPicker";
-import { format } from "date-fns";
+import { formatDate } from "date-fns";
 import InputFields from "../../../components/InputFields";
 
 const index = () => {
@@ -104,7 +104,6 @@ const index = () => {
 
       if (response.success) {
         setCurrentUser(response?.user);
-        setIsPageLoading(false);
       }
     };
 
@@ -112,22 +111,26 @@ const index = () => {
   }, [user]);
 
   const fetchMemberDetails = async () => {
-    if (currentUser && currentUser?.role === "member") {
-      const response = await getMemberById({ user_id: currentUser?.user_id });
+    if (currentUser) {
+      if (currentUser?.role === "member") {
+        const response = await getMemberById({ user_id: currentUser?.user_id });
+        console.log("🚀 ~ response:", response);
 
-      if (response.success) {
-        if (!response.member) {
-          return;
+        if (response.success) {
+          if (!response.member) {
+            return;
+          }
+          setMemberDetails(response.member);
+          if (response.member.status === "Active") {
+            setIsMemberShipActive(true);
+          }
+        } else {
+          setErrorMessage(response.message);
+          setErrorModalTitle("Error fetching member details.");
+          setOpenErrorModal(true);
         }
-        setMemberDetails(response.member);
-        if (response.member.status === "Active") {
-          setIsMemberShipActive(true);
-        }
-      } else {
-        setErrorMessage(response.message);
-        setErrorModalTitle("Error fetching member details.");
-        setOpenErrorModal(true);
       }
+      setIsPageLoading(false);
     }
   };
 
@@ -155,6 +158,8 @@ const index = () => {
         setSelectedMember(null);
         setToastMessage(response?.message);
       }
+
+      setIsPageLoading(false);
     }
   };
 
@@ -270,11 +275,11 @@ const index = () => {
             <HeaderText>Member Details</HeaderText>
             <BodyText>Full Name: {selectedMember?.name}</BodyText>
             <BodyText>Phone: {selectedMember?.phone}</BodyText>
-            <BodyText style={{ marginBottom: 15 }}>
+            {/* <BodyText style={{ marginBottom: 15 }}>
               Joined Date:{" "}
               {selectedMember &&
                 format(new Date(selectedMember?.joined_date), "do MMMM yyyy")}
-            </BodyText>
+            </BodyText> */}
 
             <InputFields
               title={"Note"}
@@ -400,13 +405,23 @@ const index = () => {
                 </SubHeaderText>
                 <SubHeaderText>
                   From:{" "}
-                  {memberDetails.renewal_date
-                    ? moment(memberDetails.renewal_date).format("Do MMMM YYYY")
-                    : moment(memberDetails.joined_date).format("Do MMMM YYYY")}
+                  {memberDetails && memberDetails.renewal_date
+                    ? formatDate(
+                        new Date(memberDetails.renewal_date),
+                        "do MMMM yyyy"
+                      )
+                    : formatDate(
+                        new Date(memberDetails.joined_date),
+                        "do MMMM yyyy"
+                      )}
                 </SubHeaderText>
                 <SubHeaderText>
                   To:{" "}
-                  {moment(memberDetails?.expiry_date).format("Do MMMM YYYY")}
+                  {memberDetails &&
+                    formatDate(
+                      new Date(memberDetails?.expiry_date),
+                      "do MMMM yyyy"
+                    )}
                 </SubHeaderText>
                 <SubHeaderText>
                   Days Left:{" "}
@@ -415,7 +430,14 @@ const index = () => {
                       ? memberDetails.renewal_date
                       : memberDetails.joined_date,
                     memberDetails?.expiry_date
-                  )}
+                  ) <= 0
+                    ? 0
+                    : getDaysLeft(
+                        memberDetails.renewal_date
+                          ? memberDetails.renewal_date
+                          : memberDetails.joined_date,
+                        memberDetails?.expiry_date
+                      )}
                 </SubHeaderText>
               </View>
             </Animated.View>
@@ -426,7 +448,7 @@ const index = () => {
                   style={{ flexDirection: "row", gap: 10 }}
                   entering={FadeInDown}
                 >
-                  <View
+                  <Pressable
                     style={{
                       flex: 1,
                       padding: 15,
@@ -436,6 +458,7 @@ const index = () => {
                       alignItems: "center",
                       gap: 8,
                     }}
+                    onPress={() => router.push("/gym/exercises")}
                   >
                     <View
                       style={{
@@ -457,8 +480,8 @@ const index = () => {
                     <SubHeaderText style={{ textAlign: "center" }}>
                       View workout recommendations
                     </SubHeaderText>
-                  </View>
-                  <View
+                  </Pressable>
+                  <Pressable
                     style={{
                       flex: 1,
                       padding: 15,
@@ -468,6 +491,7 @@ const index = () => {
                       alignItems: "center",
                       gap: 8,
                     }}
+                    onPress={() => router.push("/gym/diet")}
                   >
                     <View
                       style={{
@@ -489,7 +513,7 @@ const index = () => {
                     <SubHeaderText style={{ textAlign: "center" }}>
                       View diet plan recommendations
                     </SubHeaderText>
-                  </View>
+                  </Pressable>
                 </Animated.View>
                 <OptionsContainer
                   title="Performance Reports"
@@ -506,9 +530,9 @@ const index = () => {
               </>
             ) : (
               <View style={{ flex: 1, justifyContent: "flex-end", gap: 20 }}>
-                <HeaderText style={{ textAlign: "center" }}>
+                <BodyText style={{ textAlign: "center" }}>
                   Please renew your membership
-                </HeaderText>
+                </BodyText>
                 <StyledButton title={"Renew"} />
               </View>
             )}

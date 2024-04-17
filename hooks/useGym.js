@@ -51,6 +51,8 @@ const useGym = () => {
         member: data,
       };
     } catch (error) {
+      console.log("🚀 ~ error:", error);
+
       if (error.response?.status === 404) {
         return {
           success: true,
@@ -228,6 +230,88 @@ const useGym = () => {
     }
   };
 
+  const getExerciseRecommendations = async ({ member_id }) => {
+    try {
+      const response = await axios.get(
+        `${apiURL}/gym/exercise/recommendations/${member_id}`
+      );
+
+      const data = response.data;
+
+      return {
+        success: true,
+        data: data,
+      };
+    } catch (error) {
+      console.log("🚀 ~ error:", error);
+
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const getRecipeRecommendations = async ({ member_id }) => {
+    try {
+      const response = await axios.get(
+        `${apiURL}/gym/meal/recommendations/${member_id}`
+      );
+
+      const data = response.data;
+
+      return {
+        success: true,
+        data: data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const generateExerciseRecommendations = async ({ member_id }) => {
+    try {
+      const response = await axios.post(`${apiURL}/gym/exercise/recommend`, {
+        member_id,
+      });
+
+      const data = response.data;
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
+  const generateRecipeRecommendations = async ({ member_id }) => {
+    try {
+      const response = await axios.post(`${apiURL}/gym/meal/recommend`, {
+        member_id,
+      });
+
+      const data = response.data;
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data.message,
+      };
+    }
+  };
+
   return {
     requestMembership,
     getMemberById,
@@ -239,6 +323,10 @@ const useGym = () => {
     getTrainerAssignments,
     getMetrics,
     onEvaluateMember,
+    getExerciseRecommendations,
+    getRecipeRecommendations,
+    generateExerciseRecommendations,
+    generateRecipeRecommendations,
   };
 };
 
