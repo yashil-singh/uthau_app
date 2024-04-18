@@ -629,15 +629,15 @@ router.post("/member/create", async (req, res) => {
       [name, email, phone, expiry_date, plan_id]
     );
 
-    const member = result.rows;
+    const member = result.rows[0];
     const member_id = member.member_id;
 
     await client.query(
       `
-      INSERT INTO payments (payment_amount, remarks, member_id)
-      VALUES ($1, $2, $3)
+      INSERT INTO payments (payment_amount, remarks, member_id, status)
+      VALUES ($1, $2, $3, $4)
     `,
-      [amount, remarks, member_id]
+      [amount, remarks, member_id, "Completed"]
     );
 
     await client.query("COMMIT");

@@ -182,7 +182,7 @@ router.post("/initialize", async (req, res) => {
       },
       body: JSON.stringify({
         return_url: "http://192.168.101.2:4000/payment/callback",
-        website_url: "http://192.168.101.2:4000/payment/success",
+        website_url: "http://192.168.101.2:4000",
         amount: amount * 100,
         purchase_order_id: order_id,
         purchase_order_name: order_name,
