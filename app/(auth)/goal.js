@@ -1,4 +1,4 @@
-import { View, KeyboardAvoidingView } from "react-native";
+import { View, KeyboardAvoidingView, Platform } from "react-native";
 import { BodyText } from "../../components/StyledText";
 import { Controller, useForm } from "react-hook-form";
 import { useRegisterContext } from "../../hooks/useRegisterContext";

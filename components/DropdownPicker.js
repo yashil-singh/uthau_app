@@ -11,7 +11,34 @@ const DropdownPicker = ({
   value,
   onChange,
   errorText,
+  style,
 }) => {
+  const styles = StyleSheet.create({
+    dropdown: {
+      height: 50,
+      borderWidth: 1,
+      borderColor: colors.lightGray,
+      borderRadius: 6,
+      paddingHorizontal: 8,
+      ...style,
+    },
+    placeholderStyle: {
+      fontSize: 14,
+      color: colors.gray,
+    },
+    selectedTextStyle: {
+      fontSize: 14,
+      color: colors.gray,
+    },
+    itemTextStyle: {
+      fontSize: 14,
+    },
+    iconStyle: {
+      width: 20,
+      height: 20,
+    },
+  });
+
   return (
     <View style={{ gap: 5 }}>
       <BodyText>{title}</BodyText>
@@ -44,28 +71,4 @@ const DropdownPicker = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  dropdown: {
-    height: 50,
-    borderWidth: 2,
-    borderColor: "#e3e3e3",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-  },
-  placeholderStyle: {
-    fontSize: 14,
-  },
-  selectedTextStyle: {
-    fontSize: 14,
-  },
-  itemTextStyle: {
-    fontSize: 14,
-  },
-  iconStyle: {
-    width: 20,
-    height: 20,
-  },
-});
-
 export default DropdownPicker;

@@ -5,7 +5,7 @@ const nodemailer = require("nodemailer");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const validator = require("validator");
-
+const strictVerifyToken = require("../helpers/strictVerification");
 const { pool } = require("../dbConfig");
 
 // Function to send mail
@@ -34,6 +34,23 @@ const sendMail = async (email, subject, body) => {
     return { err: true };
   }
 };
+
+function calculateAge(dateOfBirth) {
+  const dob = new Date(dateOfBirth);
+  const now = new Date();
+
+  let age = now.getFullYear() - dob.getFullYear();
+
+  // Adjust age if the birthday hasn't occurred yet this year
+  if (
+    now.getMonth() < dob.getMonth() ||
+    (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate())
+  ) {
+    age--;
+  }
+
+  return age;
+}
 
 router.post("/admin/register", async (req, res) => {
   try {
@@ -108,10 +125,25 @@ router.post("/login", async (req, res) => {
   try {
     // Retrieve the body of the request
     const { email, password } = req.body;
+    console.log("🚀 ~ req.body:", req.body);
+
+    if (!email) {
+      return res
+        .status(400)
+        .json({ message: "Invalid request. Email address is required." });
+    }
+
+    if (!password) {
+      return res
+        .status(400)
+        .json({ message: "Invalid request. Password is required." });
+    }
 
     // Check if user exists
     const registeredUser = await pool.query(
-      `SELECT user_id, name, email, image, isVerified, role, gender, weight, height, activity_level, calorie_intake, calorie_burn, weight_goal FROM users WHERE email = $1`,
+      `SELECT user_id, name, email, image, isVerified, role, gender, weight, 
+      height, activity_level, calorie_intake, calorie_burn, weight_goal 
+      FROM users WHERE email = $1`,
       [email]
     );
 
@@ -197,32 +229,49 @@ router.post("/register", async (req, res) => {
       name,
       email,
       password,
-      age,
+      dob,
       gender,
       height,
       weight,
       activityLevel,
       weightGoal,
     } = req.body;
+    console.log("🚀 ~ req.body:", req.body);
 
-    console.log(
-      name,
-      email,
-      password,
-      age,
-      gender,
-      height,
-      weight,
-      activityLevel,
-      weightGoal
-    );
+    if (
+      !name ||
+      !email ||
+      !password ||
+      !dob ||
+      !gender ||
+      !height ||
+      !weight ||
+      !activityLevel ||
+      !weightGoal
+    ) {
+      return res.status(400).json({ message: "Invalid request." });
+    }
+
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ message: "Invalid email address." });
+    }
+
+    if (!validator.isNumeric(height) || height < 90 || height > 250) {
+      return res.status(400).json({ message: "Invalid height." });
+    }
+
+    if (!validator.isNumeric(weight) || weight < 15 || weight > 300) {
+      return res.status(400).json({ message: "Invalid weight." });
+    }
+
+    if (!validator.isDate(dob)) {
+      return res.status(400).json({ message: "Invalid date of birth." });
+    }
 
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const verificationToken = crypto.randomBytes(20).toString("hex");
-
-    // Calorie calculation
 
     // Calorie intake
     var bmr = 0;
@@ -233,10 +282,12 @@ router.post("/register", async (req, res) => {
     // Activity multiplier
     var activityPoints = 1;
 
+    const age = calculateAge(dob);
+
     if (gender === "Male") {
-      bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+      bmr = 9.65 * weight + (573 * height) / 100 - 5.08 * age + 260;
     } else {
-      bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+      bmr = 7.38 * weight + (607 * height) / 100 - 2.31 * age + 43;
     }
 
     if (activityLevel == "Not Active") {
@@ -263,12 +314,14 @@ router.post("/register", async (req, res) => {
 
     // Insert the user details to the database
     const result = await pool.query(
-      `INSERT INTO users (name, email, password, age, gender, height, weight, activity_level, weight_goal, calorie_burn, calorie_intake, verification_token) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      `INSERT INTO users 
+      (name, email, password, dob, gender, height, weight, activity_level, weight_goal, calorie_burn, calorie_intake, verification_token) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         name,
         email,
         hashedPassword,
-        age,
+        dob,
         gender,
         height,
         weight,
@@ -635,6 +688,17 @@ router.post("/change-password", async (req, res) => {
     return res
       .status(500)
       .json({ message: "Internal Server Error. Try again later." });
+  }
+});
+
+router.get("/decode", strictVerifyToken, async (req, res) => {
+  try {
+    return res.status(200).json(req.decoded);
+  } catch (error) {
+    console.log("🚀 ~ error:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error. Try again later." });
   }
 });
 

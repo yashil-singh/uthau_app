@@ -35,7 +35,18 @@ export default function Layout() {
       <Stack.Screen
         name="partner"
         options={{
-          headerTitle: "",
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="competition"
+        options={{
+          headerTitle: "Competitions",
+        }}
+      />
+      <Stack.Screen
+        name="ar"
+        options={{
           headerShown: false,
         }}
       />

@@ -1,21 +1,38 @@
-import { Stack, useNavigation } from "expo-router";
+import { Stack, useFocusEffect, useNavigation } from "expo-router";
 import { colors } from "../../helpers/theme";
 import { useAuthContext } from "../../hooks/useAuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import useDecode from "../../hooks/useDecode";
 
 export default function Layout() {
   const { user } = useAuthContext();
   const navigation = useNavigation();
 
-  useEffect(() => {
-    if (!user) {
-      navigation.navigate("(auth)", { screen: "login" });
-    } else {
-      if (user.isVerified) {
-        navigation.navigate("(tabs)", { screen: "home" });
+  const { getDecodedToken } = useDecode();
+
+  useEffect(() => {}, []);
+
+  useFocusEffect(() => {
+    const fetchDecodedToken = async () => {
+      if (!user) {
+        navigation.navigate("(auth)", { screen: "login" });
+      } else {
+        const response = await getDecodedToken();
+        console.log("🚀 ~ response:", response);
+
+        if (response.success) {
+          const currentUser = response?.user;
+          if (currentUser?.isverified) {
+            navigation.navigate("(tabs)", { screen: "home" });
+          }
+        } else {
+          navigation.navigate("(auth)", { screen: "login" });
+        }
       }
-    }
-  }, [user, navigation]);
+    };
+
+    fetchDecodedToken();
+  });
 
   return (
     <Stack

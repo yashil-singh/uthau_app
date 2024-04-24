@@ -5,16 +5,16 @@ import { useAuthContext } from "./useAuthContext";
 const useExercise = () => {
   const { user } = useAuthContext();
 
-  // Setting up headers to send with the request
-  axios.interceptors.request.use((config) => {
-    const token = user?.token || null;
+  // // Setting up headers to send with the request
+  // axios.interceptors.request.use((config) => {
+  //   const token = user?.token || null;
 
-    if (token) {
-      config.headers["x-access-token"] = token;
-    }
+  //   if (token) {
+  //     config.headers["x-access-token"] = token;
+  //   }
 
-    return config;
-  });
+  //   return config;
+  // });
 
   // To search for an exercise using user's search query
   const searchExercise = async ({ searchQuery }) => {
@@ -122,9 +122,6 @@ const useExercise = () => {
   // To fetch list of exercises that the user has saved in their diary
   const getSavedExercises = async (user_id) => {
     try {
-      if (!user_id) {
-        return;
-      }
       const response = await axios.get(
         `${apiURL}/diary/exercise/get-saved/${user_id}`
       );

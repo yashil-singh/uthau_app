@@ -26,18 +26,14 @@ const login = () => {
 
   const onSubmit = async (data) => {
     const { email, password, keepLoggedIn } = data;
-    try {
-      const response = await login({ email, password, keepLoggedIn });
 
-      if (response.success) {
-        setError(null);
-        router.push("/home");
-      } else {
-        setError(response.error);
-      }
-    } catch (error) {
-      console.log("🚀 ~ file: login.js:37 ~ error:", error);
-      setError("Unexpected error occured. Try again later.");
+    const response = await login({ email, password, keepLoggedIn });
+
+    if (response.success) {
+      setError(null);
+      router.push("/home");
+    } else {
+      setError(response.error);
     }
   };
 
@@ -45,6 +41,7 @@ const login = () => {
     <SafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
       <KeyboardAwareScrollView
         style={{ paddingHorizontal: 25, backgroundColor: colors.white }}
+        keyboardShouldPersistTaps="handled"
       >
         <View
           style={{
@@ -63,47 +60,65 @@ const login = () => {
           </BodyText>
 
           <View style={{ gap: 8 }}>
-            <View style={{ marginBottom: errors.root ? 10 : 0, gap: 10 }}>
-              <Controller
-                control={control}
-                name="email"
-                disabled={isSubmitting}
-                rules={{
-                  required: { value: true, message: ERROR_MESSAGES.REQUIRED },
-                }}
-                render={({ field: { onChange, value } }) => (
-                  <InputFields
-                    title="Email Address"
-                    placeholder="Enter your email address"
-                    value={value}
-                    type="email-address"
-                    isInvalid={errors.email ? true : false}
-                    onChangeText={onChange}
-                    errorText={errors.email?.message}
-                  />
-                )}
-              />
+            <Controller
+              control={control}
+              name="email"
+              disabled={isSubmitting}
+              rules={{
+                required: { value: true, message: ERROR_MESSAGES.REQUIRED },
+              }}
+              render={({ field: { onChange, value } }) => (
+                <InputFields
+                  title="Email Address"
+                  placeholder="Enter your email address"
+                  value={value}
+                  type="email-address"
+                  isInvalid={errors.email ? true : false}
+                  onChangeText={onChange}
+                  errorText={errors.email?.message}
+                />
+              )}
+            />
 
-              <Controller
-                control={control}
-                name="password"
-                disabled={isSubmitting}
-                rules={{
-                  required: { value: true, message: ERROR_MESSAGES.REQUIRED },
-                }}
-                render={({ field: { onChange, value } }) => (
-                  <InputFields
-                    title="Password"
-                    placeholder="Enter your password"
-                    value={value}
-                    isPassword={true}
-                    isInvalid={errors.password ? true : false}
-                    onChangeText={onChange}
-                    errorText={errors.password?.message}
-                  />
-                )}
-              />
-            </View>
+            <Controller
+              control={control}
+              name="password"
+              disabled={isSubmitting}
+              // rules={{
+              //   required: { value: true, message: ERROR_MESSAGES.REQUIRED },
+              // }}
+              render={({ field: { onChange, value } }) => (
+                <InputFields
+                  title="Password"
+                  placeholder="Enter your password"
+                  value={value}
+                  isPassword={true}
+                  isInvalid={errors.password ? true : false}
+                  onChangeText={onChange}
+                  errorText={errors.password?.message}
+                />
+              )}
+            />
+
+            {/* <Controller
+              control={control}
+              name="password"
+              disabled={isSubmitting}
+              rules={{
+                required: { value: true, message: ERROR_MESSAGES.REQUIRED },
+              }}
+              render={({ field: { onChange, value } }) => (
+                <InputFields
+                  title="Password"
+                  placeholder="Enter your password"
+                  value={value}
+                  isPassword={true}
+                  isInvalid={errors.password ? true : false}
+                  onChangeText={onChange}
+                  errorText={errors.password?.message}
+                />
+              )}
+            /> */}
 
             <View
               style={{

@@ -17,6 +17,7 @@ function strictVerifyToken(req, res, next) {
     }
 
     req.decoded = decoded;
+
     next();
   });
 }

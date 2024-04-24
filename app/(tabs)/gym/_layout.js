@@ -20,6 +20,36 @@ export default function Layout() {
           headerTitle: "Gym",
         }}
       />
+      <Stack.Screen
+        name="exercises"
+        options={{
+          headerTitle: "Workouts",
+        }}
+      />
+      <Stack.Screen
+        name="diet"
+        options={{
+          headerTitle: "Diet Plan",
+        }}
+      />
+      <Stack.Screen
+        name="reports"
+        options={{
+          headerTitle: "Performance Reports",
+        }}
+      />
+      <Stack.Screen
+        name="generate"
+        options={{
+          headerTitle: "Member Code",
+        }}
+      />
+      <Stack.Screen
+        name="payment"
+        options={{
+          headerTitle: "Membership Payment",
+        }}
+      />
     </Stack>
   );
 }

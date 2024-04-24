@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { BodyText } from "./StyledText";
 import { colors } from "../helpers/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Platform } from "react-native";
 
 const InputFields = ({
   title,
@@ -14,6 +15,9 @@ const InputFields = ({
   isInvalid,
   errorText,
   textStyle,
+  isEditable,
+  isMultiline,
+  numberOfLines,
 }) => {
   const [isSecure, setIsSecure] = useState(isPassword);
   const [isFocused, setIsFocused] = useState(false);
@@ -33,22 +37,34 @@ const InputFields = ({
             : isFocused
             ? colors.primary.normal
             : colors.lightGray,
+          backgroundColor:
+            isEditable == false ? colors.lightGray : colors.white,
         }}
       >
         <TextInput
           style={{
-            paddingVertical: 12,
+            paddingVertical: Platform.OS === "ios" ? 15 : 10,
             fontSize: 14,
-            color: colors.gray,
             flex: 1,
+            color: colors.gray,
+            textAlignVertical: isMultiline ? "top" : "center",
           }}
           placeholder={placeholder}
           secureTextEntry={isSecure}
           value={value}
-          keyboardType={type}
+          keyboardType={
+            isPassword == true
+              ? isSecure
+                ? "default"
+                : "visible-password"
+              : type
+          }
           onChangeText={onChangeText}
           onBlur={() => setIsFocused(false)}
           onFocus={() => setIsFocused(true)}
+          editable={isEditable}
+          multiline={isMultiline || false}
+          numberOfLines={numberOfLines || 1}
         />
         <Pressable onPress={() => setIsSecure(!isSecure)}>
           {isPassword &&

@@ -6,10 +6,8 @@ import {
   Modal,
   Image,
   Pressable,
-  Alert,
-  TouchableOpacity,
 } from "react-native";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
 import {
   BodyText,
@@ -25,21 +23,72 @@ import { Feather } from "@expo/vector-icons";
 import { TouchableRipple } from "react-native-paper";
 import { FontAwesome } from "@expo/vector-icons";
 import { useAuthContext } from "../../../hooks/useAuthContext";
-import decodeToken from "../../../helpers/decodeToken";
 import { useFocusEffect } from "expo-router";
 import ErrorModal from "../../../components/ErrorModal";
-import { Entypo } from "@expo/vector-icons";
 import breakfast from "../../../assets/images/breakfast.png";
 import lunch from "../../../assets/images/lunch.png";
 import snacks from "../../../assets/images/snacks.png";
 import dinner from "../../../assets/images/dinner.png";
 import OptionsContainer from "../../../components/OptionsContainer";
+import useDecode from "../../../hooks/useDecode";
 
 const recipes = () => {
   const { user } = useAuthContext();
 
-  const decodedToken = decodeToken(user);
-  const currentUser = decodedToken?.user;
+  // Decode and get the data of the current user
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const { getDecodedToken } = useDecode();
+
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
+
+      if (response.success) {
+        setCurrentUser(response?.user);
+        setIsPageLoading(false);
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
+
+  const [searchResults, setSearchResults] = useState(null);
+
+  // Pagination related states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1); // Initialize with 1 page
+  const resultsPerPage = 10;
+  const flatListRef = useRef(null);
+  console.log("🚀 ~ searchResults:", searchResults?.length);
+
+  useEffect(() => {
+    // Update total pages whenever search results change
+    if (searchResults) {
+      const totalPagesCount = Math.ceil(searchResults.length / resultsPerPage);
+      setTotalPages(totalPagesCount || 1); // Ensure there's always at least 1 page
+    }
+
+    setCurrentPage(1);
+  }, [searchResults, onSearch]);
+
+  // Function to handle page change
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+
+    flatListRef.current.scrollToOffset({ animated: true, offset: 0 });
+  };
+
+  // Generate an array of page numbers
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(i);
+    }
+    return pageNumbers;
+  };
 
   const [searchQuery, setSearchQuery] = useState(null);
   const [isDisabled, setIsDisabled] = useState(false);
@@ -85,7 +134,6 @@ const recipes = () => {
     return tags;
   };
 
-  const [searchResults, setSearchResults] = useState(null);
   const [savedRecipes, setSavedRecipes] = useState(null);
 
   const getSelectedMeal = async ({ meal }) => {
@@ -114,14 +162,12 @@ const recipes = () => {
   };
 
   const fetchSavedRecipes = async () => {
-    try {
-      const response = await getSavedRecipes(currentUser.user_id);
+    if (currentUser) {
+      const response = await getSavedRecipes(currentUser?.user_id);
 
       const data = response?.data;
 
       setSavedRecipes(data);
-    } catch (error) {
-      return;
     }
   };
 
@@ -157,7 +203,7 @@ const recipes = () => {
     setErrorMessage(null);
     try {
       const response = await saveRecipe({
-        user_id: currentUser.user_id,
+        user_id: currentUser?.user_id,
         recipe_id,
         recipe_name,
         ingredients,
@@ -488,11 +534,14 @@ const recipes = () => {
             placeholder="Search recipes"
             style={{
               borderRadius: 6,
-              backgroundColor: "#f2f2f2",
+              backgroundColor: colors.white,
               display: "flex",
               alignItems: "center",
+              borderWidth: 1,
+              borderColor: colors.lightGray,
             }}
-            inputStyle={{ fontSize: 14 }}
+            inputStyle={{ fontSize: 14, color: colors.black }}
+            placeholderTextColor={colors.gray}
             iconColor={colors.primary.normal}
             onChangeText={(text) => setSearchQuery(text)}
             value={searchQuery}
@@ -527,33 +576,6 @@ const recipes = () => {
         </View>
         {searchResults == null ? (
           <View style={{ gap: 8 }}>
-            {/* <HeaderText>Find the right recipes for you</HeaderText>
-            <TouchableOpacity
-              style={styles.optionContainer}
-              onPress={() => getDietLabelRecipes({ label: "high-protein" })}
-              activeOpacity={0.8}
-            >
-              <SubHeaderText style={{ fontSize: 16 }}>
-                High Protein
-              </SubHeaderText>
-              <Entypo name="chevron-right" size={18} color={colors.black} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.optionContainer}
-              onPress={() => getDietLabelRecipes({ label: "low-fat" })}
-              activeOpacity={0.8}
-            >
-              <SubHeaderText style={{ fontSize: 16 }}>Low Fat</SubHeaderText>
-              <Entypo name="chevron-right" size={18} color={colors.black} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.optionContainer}
-              onPress={() => getDietLabelRecipes({ label: "low-carb" })}
-              activeOpacity={0.8}
-            >
-              <SubHeaderText style={{ fontSize: 16 }}>Low Carbs</SubHeaderText>
-              <Entypo name="chevron-right" size={18} color={colors.black} />
-            </TouchableOpacity> */}
             <OptionsContainer
               title={"Breakfast"}
               color={colors.orange.normal}
@@ -615,14 +637,52 @@ const recipes = () => {
               />
             </OptionsContainer>
           </View>
-        ) : (
+        ) : searchResults != null && searchResults?.length > 0 ? (
           <>
             <FlatList
-              data={searchResults}
+              ref={flatListRef}
+              data={searchResults.slice(
+                (currentPage - 1) * resultsPerPage,
+                currentPage * resultsPerPage
+              )}
               showsVerticalScrollIndicator={false}
               keyExtractor={(item) => item.recipe.uri.split("#")[1]}
+              ListFooterComponent={() => (
+                <View
+                  style={{
+                    marginTop: 15,
+                    display: "flex",
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: 20,
+                  }}
+                >
+                  {getPageNumbers().map((pageNumber) => (
+                    <TouchableRipple
+                      style={{ padding: 5, borderRadius: 8 }}
+                      key={pageNumber}
+                      onPress={() => handlePageChange(pageNumber)}
+                      disabled={pageNumber === currentPage}
+                    >
+                      <BodyText
+                        style={{
+                          color:
+                            pageNumber === currentPage
+                              ? colors.gray
+                              : colors.primary.normal,
+                        }}
+                      >
+                        {pageNumber}
+                      </BodyText>
+                    </TouchableRipple>
+                  ))}
+                </View>
+              )}
               renderItem={(item) => (
                 <CardOption
+                  showBookmark={true}
                   style={{ marginBottom: 5 }}
                   key={item.index}
                   gifUrl={item.item.recipe.image}
@@ -674,6 +734,18 @@ const recipes = () => {
               )}
             />
           </>
+        ) : (
+          <View
+            style={{
+              flex: 1,
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <SubHeaderText style={{ fontSize: 18, textAlign: "center" }}>
+              No results found.
+            </SubHeaderText>
+          </View>
         )}
       </MainContainer>
     </View>

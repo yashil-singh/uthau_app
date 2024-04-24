@@ -1,14 +1,6 @@
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import React, { memo, useState } from "react";
+import { Image, Pressable, View } from "react-native";
+import React from "react";
 import { FontAwesome } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { colors } from "../helpers/theme";
 import { BodyText, HeaderText } from "./StyledText";
 import formatWord from "../helpers/formatWord";
@@ -24,13 +16,13 @@ const CardOption = ({
   style,
   handleSave,
   handleRemove,
+  showBookmark,
 }) => {
   const formattedTitle = formatWord(title);
   const formattedTarget = formatWord(target);
 
   return (
-    <Animated.View
-      entering={FadeInDown.springify()}
+    <View
       style={{
         ...style,
         borderRadius: 16,
@@ -81,55 +73,57 @@ const CardOption = ({
           ></View>
         </View>
       </Pressable>
-      <View
-        style={{
-          justifyContent: "flex-end",
-          overflow: "hidden",
-        }}
-      >
-        {isSaved ? (
-          <TouchableRipple
-            rippleColor="rgba(0, 0, 0, 0.1)"
-            onPress={handleRemove}
-            style={{
-              borderRadius: 60,
-              paddingVertical: 4,
-              paddingHorizontal: 7,
-              flexDirection: "row",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-            borderless
-          >
-            <FontAwesome
-              name="bookmark"
-              size={24}
-              color={colors.warning.normal}
-            />
-          </TouchableRipple>
-        ) : (
-          <TouchableRipple
-            rippleColor="rgba(0, 0, 0, 0.1)"
-            onPress={handleSave}
-            style={{
-              borderRadius: 60,
-              paddingVertical: 4,
-              paddingHorizontal: 7,
-              flexDirection: "row",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-            borderless
-          >
-            <FontAwesome
-              name="bookmark-o"
-              size={24}
-              color={colors.warning.normal}
-            />
-          </TouchableRipple>
-        )}
-      </View>
-    </Animated.View>
+      {showBookmark && (
+        <View
+          style={{
+            justifyContent: "flex-end",
+            overflow: "hidden",
+          }}
+        >
+          {isSaved ? (
+            <TouchableRipple
+              rippleColor="rgba(0, 0, 0, 0.1)"
+              onPress={handleRemove}
+              style={{
+                borderRadius: 60,
+                paddingVertical: 4,
+                paddingHorizontal: 7,
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+              borderless
+            >
+              <FontAwesome
+                name="bookmark"
+                size={24}
+                color={colors.warning.normal}
+              />
+            </TouchableRipple>
+          ) : (
+            <TouchableRipple
+              rippleColor="rgba(0, 0, 0, 0.1)"
+              onPress={handleSave}
+              style={{
+                borderRadius: 60,
+                paddingVertical: 4,
+                paddingHorizontal: 7,
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+              borderless
+            >
+              <FontAwesome
+                name="bookmark-o"
+                size={24}
+                color={colors.warning.normal}
+              />
+            </TouchableRipple>
+          )}
+        </View>
+      )}
+    </View>
   );
 };
 

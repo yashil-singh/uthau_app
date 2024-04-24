@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useEffect, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
-import { Searchbar } from "react-native-paper";
+import { Portal, Searchbar, Snackbar } from "react-native-paper";
 import { colors } from "../../../helpers/theme";
 import {
   BodyText,
@@ -50,10 +50,13 @@ const searchFood = () => {
   const [selectedServing, setSelectedServing] = useState(null);
   const [quantity, setQuantity] = useState("1");
   const [selectedMeal, setSelectedMeal] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [isDisabled, setIsDisabled] = useState(false);
   const [isLogLoading, setIsLogLoading] = useState(false);
   const [isLogDisabled, setIsLogDisabled] = useState(false);
+
+  // States related to toast
+  const [openToast, setOpenToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   // Nutrient values
   const [calories, setCalories] = useState(0);
@@ -245,10 +248,13 @@ const searchFood = () => {
         setAddError(null);
         setIsLogDisabled(false);
         setIsLogLoading(false);
-        setOpenModal(false);
-        return;
+        setToastMessage("Food logged successfully!");
+      } else {
+        setToastMessage(response.error);
       }
+      setOpenToast(true);
 
+      setOpenModal(false);
       setAddError("Cannot complete this request at the moment.");
       setIsLogDisabled(false);
       setIsLogLoading(false);
@@ -260,7 +266,7 @@ const searchFood = () => {
     setCarbs(0);
     setFat(0);
     setProtein(0);
-    setQuantity(1);
+    setQuantity("1");
     setSelectedMeal(null);
     setSelectedServing(null);
     setOpenModal(false);
@@ -610,6 +616,22 @@ const searchFood = () => {
             </BodyText>
           </View>
         )}
+        <Portal>
+          <Snackbar
+            visible={openToast}
+            onDismiss={() => setOpenToast(false)}
+            action={{
+              label: "close",
+              labelStyle: {
+                color: colors.primary.normal,
+              },
+            }}
+            duration={2000}
+            style={{ backgroundColor: colors.white }}
+          >
+            <BodyText>{toastMessage}</BodyText>
+          </Snackbar>
+        </Portal>
       </MainContainer>
     </KeyboardAvoidingView>
   );

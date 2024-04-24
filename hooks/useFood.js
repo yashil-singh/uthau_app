@@ -6,15 +6,15 @@ const useFood = () => {
   const { user } = useAuthContext();
 
   // Setting up headers to send with the request
-  axios.interceptors.request.use((config) => {
-    const token = user?.token || null;
+  // axios.interceptors.request.use((config) => {
+  //   const token = user?.token || null;
 
-    if (token) {
-      config.headers["x-access-token"] = token;
-    }
+  //   if (token) {
+  //     config.headers["x-access-token"] = token;
+  //   }
 
-    return config;
-  });
+  //   return config;
+  // });
 
   // To fetch the list of logged foods by the user
   const getLoggedFood = async ({ user_id, date }) => {

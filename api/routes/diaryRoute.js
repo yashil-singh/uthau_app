@@ -155,7 +155,7 @@ router.post("/get-food-log", strictVerifyToken, async (req, res) => {
         AND
             fd.date = $2
         GROUP BY
-            lf.meal_type;
+            lf.meal_type
       `,
       [user_id, date]
     );
@@ -268,6 +268,7 @@ router.get(
 router.post("/exercise/remove", strictVerifyToken, async (req, res) => {
   try {
     const { user_id, exercise_id } = req.body;
+    console.log("🚀 ~ req.body:", req.body);
 
     if (!user_id || !exercise_id) {
       return res.status(400).json({ message: "Invalid request." });
@@ -305,6 +306,8 @@ router.get(
   async (req, res) => {
     try {
       const { user_id } = req.params;
+      console.log("🚀 ~ req.params:", req.params);
+
       if (!user_id || user_id == undefined) {
         return res.status(400).json({ message: "Invalid request." });
       }
@@ -419,7 +422,7 @@ router.post("/recipe/remove", strictVerifyToken, async (req, res) => {
 
     return res
       .status(200)
-      .json({ message: "Exercise removed from diary successfully." });
+      .json({ message: "Recipe removed from diary successfully." });
   } catch (error) {
     console.log("🚀 ~ diaryRoute error:", error);
     return res

@@ -12,6 +12,9 @@ const diaryRoute = require("./routes/diaryRoute");
 const exerciseRoute = require("./routes/exerciseRoute");
 const recipeRoute = require("./routes/recipeRoute");
 const usersRoute = require("./routes/usersRoute");
+const gymRoute = require("./routes/gymRoute");
+const paymentRoute = require("./routes/paymentRoute");
+const vizualizationRoute = require("./routes/vizualizationRoute");
 const { pool } = require("./dbConfig");
 
 // Middlewares
@@ -23,6 +26,9 @@ app.use("/diary", diaryRoute);
 app.use("/exercise", exerciseRoute);
 app.use("/recipe", recipeRoute);
 app.use("/users", usersRoute);
+app.use("/gym", gymRoute);
+app.use("/payment", paymentRoute);
+app.use("/admin", vizualizationRoute);
 
 app.listen(4000, () => {
   console.log("listening on port 4000");
@@ -49,6 +55,7 @@ io.on("connection", (socket) => {
         AND isConnected = true`,
         [user_id, id]
       );
+      console.log("🚀 ~ check:", check.rows);
 
       if (check.rowCount <= 0) {
         console.log("NOT SENT.");
@@ -59,8 +66,6 @@ io.on("connection", (socket) => {
         "INSERT INTO messages (sender_id, receiver_id, sent_text) VALUES ($1, $2, $3) RETURNING *",
         [user_id, id, message]
       );
-
-      console.log(users[id]);
 
       io.emit("receiveMessage", rows[0]);
 
@@ -89,7 +94,8 @@ app.get("/messages", async (req, res) => {
       `
     SELECT * FROM messages 
     WHERE (sender_id = $1 OR receiver_id = $1) 
-    AND (sender_id = $2 OR receiver_id = $2)`,
+    AND (sender_id = $2 OR receiver_id = $2)
+    ORDER BY sent_at DESC`,
       [sender_id, receiver_id]
     );
     return res.status(200).json(messages.rows);

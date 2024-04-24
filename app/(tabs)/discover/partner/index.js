@@ -4,8 +4,9 @@ import {
   Image,
   FlatList,
   Platform,
+  ActivityIndicator,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import MainContainer from "../../../../components/MainContainer";
 import {
   BodyText,
@@ -19,16 +20,28 @@ import { useFocusEffect, useRouter } from "expo-router";
 import * as Location from "expo-location";
 import { useUsers } from "../../../../hooks/useUsers";
 import { useAuthContext } from "../../../../hooks/useAuthContext";
-import decodeToken from "../../../../helpers/decodeToken";
 import ErrorModal from "../../../../components/ErrorModal";
 import { Badge } from "react-native-paper";
 import { userRadius } from "../../../../helpers/constants";
+import useDecode from "../../../../hooks/useDecode";
 
 const index = () => {
   const { user } = useAuthContext();
-  const decodedToken = decodeToken(user);
-  const currentUser = decodedToken?.user;
-  const user_id = currentUser?.user_id;
+  const { getDecodedToken } = useDecode();
+
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
+
+      if (response.success) {
+        setCurrentUser(response?.user);
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
 
   const router = useRouter();
   const [friends, setFriends] = useState([]);
@@ -37,6 +50,8 @@ const index = () => {
   const { getAllFriends, getUserRequestReceived } = useUsers();
 
   const [location, setLocation] = useState(null);
+
+  const [isLoading, setIsLoading] = useState(true);
 
   //Modal related states
   const [openErrorModal, setOpenErrorModal] = useState(false);
@@ -53,29 +68,31 @@ const index = () => {
         return;
       }
       let location = await Location.getCurrentPositionAsync({});
+
       setLocation(location);
     };
-
     getLocationPermission();
   }, []);
 
-  useEffect(() => {
-    const getFriends = async () => {
-      const response = await getAllFriends({ user_id });
+  const getFriends = async () => {
+    if (currentUser) {
+      const response = await getAllFriends({ user_id: currentUser?.user_id });
 
       if (response.success) {
         const connections = response.data;
-
         setFriends(connections.data);
+        setIsLoading(false);
       }
-    };
+    }
+  };
 
-    const getRequests = async () => {
+  const getRequests = async () => {
+    if (currentUser) {
       const lat = location?.coords.latitude;
       const lng = location?.coords.longitude;
       const radius = userRadius;
       const response = await getUserRequestReceived({
-        user_id,
+        user_id: currentUser?.user_id,
         lat,
         lng,
         radius,
@@ -83,12 +100,17 @@ const index = () => {
 
       if (response.success) {
         setRequests(response.requests);
+        setIsLoading(false);
       }
-    };
+    }
+  };
 
-    getFriends();
-    getRequests();
-  }, [user_id, location]);
+  useFocusEffect(
+    useCallback(() => {
+      getFriends();
+      getRequests();
+    }, [currentUser, location])
+  );
 
   return (
     <MainContainer padding={15} gap={15}>
@@ -98,11 +120,11 @@ const index = () => {
         message={"Location permession is required to access this feature."}
         onClose={() => {
           setOpenErrorModal(false);
-          router.replace("discover");
+          router.back();
         }}
         onDismiss={() => {
           setOpenErrorModal(false);
-          router.replace("discover");
+          router.back();
         }}
       />
 
@@ -136,9 +158,11 @@ const index = () => {
           >
             Requests
           </LinkText>
-          <Badge style={{ position: "absolute", top: -15, right: 0 }}>
-            {requests.length}
-          </Badge>
+          {requests.length > 0 && (
+            <Badge style={{ position: "absolute", top: -15, right: 0 }}>
+              {requests.length}
+            </Badge>
+          )}
         </View>
       </View>
 
@@ -169,7 +193,7 @@ const index = () => {
             >
               <Image
                 source={{
-                  uri: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
+                  uri: item.item.image,
                 }}
                 height={60}
                 width={60}
@@ -180,14 +204,23 @@ const index = () => {
                   flex: 1,
                 }}
               >
-                <SubHeaderText style={{ fontSize: 15 }}>
+                <SubHeaderText style={{ fontSize: 14 }}>
                   {item.item.name}
                 </SubHeaderText>
+                <BodyText style={{ fontSize: 12, color: colors.gray }}>
+                  {item.item?.email}
+                </BodyText>
               </View>
               <Feather name="send" size={24} color={colors.primary.normal} />
             </TouchableOpacity>
           )}
         />
+      ) : isLoading ? (
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <ActivityIndicator size={"large"} color={colors.primary.normal} />
+        </View>
       ) : (
         <View
           style={{
@@ -198,7 +231,9 @@ const index = () => {
             alignItems: "center",
           }}
         >
-          <HeaderText style={{ fontSize: 20 }}>It's empty here!</HeaderText>
+          <HeaderText style={{ fontSize: 20 }}>
+            Oops! It's a bit empty here.
+          </HeaderText>
           <BodyText
             style={{
               maxWidth: "75%",
@@ -206,7 +241,7 @@ const index = () => {
               color: colors.gray,
             }}
           >
-            It's fun to have a gym buddy. We will help you find one
+            It's fun to have a gym buddy. We will help you find one.
           </BodyText>
         </View>
       )}

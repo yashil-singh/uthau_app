@@ -7,11 +7,10 @@ import {
   Pressable,
   Modal,
   ActivityIndicator,
-  Platform,
 } from "react-native";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
-import { Searchbar } from "react-native-paper";
+import { Portal, Searchbar, Snackbar } from "react-native-paper";
 import { colors } from "../../../helpers/theme";
 import {
   BodyText,
@@ -25,24 +24,76 @@ import cardio from "../../../assets/images/cardio.png";
 import chest from "../../../assets/images/chest.png";
 import leg from "../../../assets/images/leg.png";
 import useExercise from "../../../hooks/useExercise";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import CardOption from "../../../components/CardOption";
 import { Feather } from "@expo/vector-icons";
 import formatWord from "../../../helpers/formatWord";
 import { useAuthContext } from "../../../hooks/useAuthContext";
-import decodeToken from "../../../helpers/decodeToken";
 import { FontAwesome } from "@expo/vector-icons";
 import { TouchableRipple } from "react-native-paper";
 import { useFocusEffect } from "expo-router";
 import ErrorModal from "../../../components/ErrorModal";
+import useDecode from "../../../hooks/useDecode";
 
 const exercises = () => {
   const { user } = useAuthContext();
 
-  const decodedToken = decodeToken(user);
-  const currentUser = decodedToken?.user;
+  const { getDecodedToken } = useDecode();
 
-  // Search related states
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const fetchDecodedToken = async () => {
+      const response = await getDecodedToken();
+
+      if (response.success) {
+        setCurrentUser(response?.user);
+        setIsPageLoading(false);
+      }
+    };
+
+    fetchDecodedToken();
+  }, [user]);
+
+  // States related to toast
+  const [openToast, setOpenToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("");
+
+  const [searchResults, setSearchResults] = useState([]);
+
+  // Pagination related states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1); // Initialize with 1 page
+  const resultsPerPage = 10;
+  const flatListRef = useRef(null);
+
+  useEffect(() => {
+    // Update total pages whenever search results change
+    const totalPagesCount = Math.ceil(searchResults.length / resultsPerPage);
+    setTotalPages(totalPagesCount || 1); // Ensure there's always at least 1 page
+
+    setCurrentPage(1);
+  }, [searchResults, onSearch, onGetBodyPart]);
+
+  // Function to handle page change
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+
+    flatListRef.current.scrollToOffset({ animated: true, offset: 0 });
+  };
+
+  // Generate an array of page numbers
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(i);
+    }
+    return pageNumbers;
+  };
+
+  // Exercises related hooks
   const {
     searchExercise,
     getBodyPart,
@@ -56,7 +107,6 @@ const exercises = () => {
   const [searchIsDisabled, setSearchIsDisabled] = useState(false);
 
   // Store the results
-  const [searchResults, setSearchResults] = useState([]);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -76,21 +126,6 @@ const exercises = () => {
 
   // Saved exercises
   const [savedExercises, setSavedExercises] = useState([]);
-
-  const [displayedExercises, setDisplayedExercises] = useState(
-    searchResults?.slice(0, 10)
-  );
-
-  // Load more exercises as the user scrolls
-  const handleEndReached = () => {
-    if (displayedExercises == null || displayedExercises == []) return null;
-    const remainingExercises = searchResults?.slice(
-      displayedExercises?.length,
-      displayedExercises?.length + 10
-    );
-
-    setDisplayedExercises((prev) => [...prev, ...remainingExercises]);
-  };
 
   // When searching for exercise
   const onSearch = async () => {
@@ -129,6 +164,7 @@ const exercises = () => {
 
     if (response.success) {
       const data = response?.data;
+
       setSearchResults(data);
     } else {
       setSearchError(response.error);
@@ -139,79 +175,53 @@ const exercises = () => {
     setIsLoading(false);
   };
 
-  // To save an exercise
-  const onSave = async ({
-    exercise_id,
-    exercise_name,
-    target,
-    secondaryMuscles,
-    instructions,
-    equipment,
-    gifUrl,
-    bodyPart,
-    user_id,
-  }) => {
-    setSaveError(null);
-    setMessage(null);
-    try {
-      const response = await saveExercise({
-        exercise_id,
-        exercise_name,
-        target,
-        secondaryMuscles,
-        instructions,
-        equipment,
-        gifUrl,
-        bodyPart,
-        user_id,
-      });
+  const handleBookmark = async (exerciseData, operation) => {
+    const {
+      exercise_id,
+      exercise_name,
+      target,
+      secondaryMuscles,
+      instructions,
+      equipment,
+      gifUrl,
+      bodyPart,
+    } = exerciseData;
+    const user_id = currentUser?.user_id;
 
-      if (!response.success) {
-        setSaveError(response.message);
-        setMessage("Error saving exercise to diary.");
-        setOpenErrorModal(true);
-      } else {
-        setMessage("Exercise saved to diary.");
-      }
-    } catch (error) {
-      setSaveError("Unexpected error occured. Try again later.");
-    }
-  };
+    const response =
+      operation === "save"
+        ? await saveExercise({
+            exercise_id,
+            exercise_name,
+            target,
+            secondaryMuscles,
+            instructions,
+            equipment,
+            gifUrl,
+            bodyPart,
+            user_id,
+          })
+        : await removeSavedExercise({ user_id, exercise_id });
 
-  // To remove from saved
-  const onRemove = async ({ user_id, exercise_id }) => {
-    try {
-      const response = await removeSavedExercise({ user_id, exercise_id });
-
-      if (response.success) {
-        setMessage("Exercise removed form diary.");
-      } else {
-        setSaveError(response.message);
-        setOpenErrorModal(true);
-        setMessage("Error removing exercise from diary.");
-      }
-    } catch (error) {
-      console.log("🚀 ~ error:", error);
-      setSaveError("Unexpected error occured. Try again later.");
-    }
+    setOpenToast(true);
+    setToastMessage(response.message);
+    fetchSavedExercises();
   };
 
   const fetchSavedExercises = async () => {
-    try {
-      const response = await getSavedExercises(currentUser.user_id);
+    if (currentUser) {
+      const response = await getSavedExercises(currentUser?.user_id);
 
       const data = response?.data;
 
       setSavedExercises(data);
-    } catch (error) {
-      return;
     }
   };
 
   useFocusEffect(
     useCallback(() => {
       fetchSavedExercises();
-    }, [searchResults, message])
+    }, [searchResults])
   );
 
   // Check if the exercise is saved or not
@@ -237,6 +247,22 @@ const exercises = () => {
           setSaveError(null);
         }}
       />
+      <Portal>
+        <Snackbar
+          visible={openToast}
+          onDismiss={() => setOpenToast(false)}
+          action={{
+            label: "close",
+            labelStyle: {
+              color: colors.primary.normal,
+            },
+          }}
+          duration={2000}
+          style={{ backgroundColor: colors.white }}
+        >
+          <BodyText>{toastMessage}</BodyText>
+        </Snackbar>
+      </Portal>
       <Modal
         transparent
         animationType="slide"
@@ -263,7 +289,7 @@ const exercises = () => {
               name="arrow-left"
               size={24}
               color="black"
-              onPress={() => toggleModal}
+              onPress={() => toggleModal()}
             />
             <HeaderText style={{ fontSize: 24 }}>Details</HeaderText>
           </View>
@@ -271,8 +297,6 @@ const exercises = () => {
             data={[modalData]}
             showsVerticalScrollIndicator={false}
             keyExtractor={(item) => item.id.toString()}
-            onEndReachedThreshold={0.3}
-            onEndReached={handleEndReached}
             renderItem={({ item }) => (
               <View style={{ gap: 25, paddingTop: 20 }}>
                 {item?.gifUrl && (
@@ -306,10 +330,12 @@ const exercises = () => {
                           }}
                           borderless
                           onPress={() =>
-                            onRemove({
-                              user_id: currentUser?.user_id,
-                              exercise_id: item.id,
-                            })
+                            handleBookmark(
+                              {
+                                exercise_id: item.id,
+                              },
+                              "remove"
+                            )
                           }
                         >
                           <FontAwesome
@@ -327,17 +353,19 @@ const exercises = () => {
                           }}
                           borderless
                           onPress={() =>
-                            onSave({
-                              exercise_id: modalData.id,
-                              exercise_name: modalData.name,
-                              target: modalData.target,
-                              secondaryMuscles: modalData.secondaryMuscles,
-                              instructions: modalData.instructions,
-                              equipment: modalData.equipment,
-                              gifUrl: modalData.gifUrl,
-                              bodyPart: modalData.bodyPart,
-                              user_id: currentUser?.user_id,
-                            })
+                            handleBookmark(
+                              {
+                                exercise_id: item.id,
+                                exercise_name: item.name,
+                                target: item.target,
+                                secondaryMuscles: item.secondaryMuscles,
+                                instructions: item.instructions,
+                                equipment: item.equipment,
+                                gifUrl: item.gifUrl,
+                                bodyPart: item.bodyPart,
+                              },
+                              "save"
+                            )
                           }
                         >
                           <FontAwesome
@@ -387,7 +415,7 @@ const exercises = () => {
         </View>
       </Modal>
       <MainContainer padding={15} gap={15}>
-        <Animated.View entering={FadeInDown.springify()}>
+        <View>
           <SubHeaderText style={{ fontSize: 12 }}>
             What are you looking for?
           </SubHeaderText>
@@ -395,10 +423,15 @@ const exercises = () => {
             placeholder="Search exercises"
             style={{
               borderRadius: 6,
-              backgroundColor: "#f2f2f2",
+              backgroundColor: colors.white,
+              display: "flex",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: colors.lightGray,
             }}
+            inputStyle={{ fontSize: 14, color: colors.black }}
+            placeholderTextColor={colors.gray}
             iconColor={colors.primary.normal}
-            inputStyle={{ fontSize: 14 }}
             showDivider={true}
             value={searchQuery}
             onChangeText={(query) => setSearchQuery(query)}
@@ -406,12 +439,15 @@ const exercises = () => {
             onIconPress={onSearch}
             loading={searchIsLoading}
             editable={!searchIsDisabled}
-            onClearIconPress={() => setResultMessage(null)}
+            onClearIconPress={() => {
+              setResultMessage(null);
+              setCurrentPage(1);
+            }}
           />
           {searchError && (
             <BodyText style={styles.errorMessage}>{searchError}</BodyText>
           )}
-        </Animated.View>
+        </View>
         {isLoading ? (
           <ActivityIndicator
             style={{ flex: 1, justifyContent: "center" }}
@@ -428,16 +464,26 @@ const exercises = () => {
                     justifyContent: "flex-end",
                   }}
                 >
-                  <Pressable onPress={() => setSearchResults([])}>
+                  <Pressable
+                    onPress={() => {
+                      setSearchResults([]);
+                      setCurrentPage(1);
+                    }}
+                  >
                     <BodyText style={{ color: colors.primary.normal }}>
                       Clear
                     </BodyText>
                   </Pressable>
                 </View>
                 <FlatList
-                  data={searchResults}
+                  ref={flatListRef}
+                  data={searchResults.slice(
+                    (currentPage - 1) * resultsPerPage,
+                    currentPage * resultsPerPage
+                  )}
                   renderItem={({ item, index }) => (
                     <CardOption
+                      showBookmark={true}
                       desc={"Targeted muscle(s):"}
                       isSaved={checkSaved(item.id)}
                       title={item.name}
@@ -450,27 +496,64 @@ const exercises = () => {
                         setModalData(item);
                       }}
                       handleSave={() =>
-                        onSave({
-                          exercise_id: item.id,
-                          exercise_name: item.name,
-                          target: item.target,
-                          secondaryMuscles: item.secondaryMuscles,
-                          instructions: item.instructions,
-                          equipment: item.equipment,
-                          gifUrl: item.gifUrl,
-                          bodyPart: item.bodyPart,
-                          user_id: currentUser?.user_id,
-                        })
+                        handleBookmark(
+                          {
+                            exercise_id: item.id,
+                            exercise_name: item.name,
+                            target: item.target,
+                            secondaryMuscles: item.secondaryMuscles,
+                            instructions: item.instructions,
+                            equipment: item.equipment,
+                            gifUrl: item.gifUrl,
+                            bodyPart: item.bodyPart,
+                          },
+                          "save"
+                        )
                       }
                       handleRemove={() =>
-                        onRemove({
-                          user_id: currentUser?.user_id,
-                          exercise_id: item.id,
-                        })
+                        handleBookmark(
+                          {
+                            exercise_id: item.id,
+                          },
+                          "remove"
+                        )
                       }
                     />
                   )}
                   showsVerticalScrollIndicator={false}
+                  ListFooterComponent={() => (
+                    <View
+                      style={{
+                        marginTop: 15,
+                        display: "flex",
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: 20,
+                      }}
+                    >
+                      {getPageNumbers().map((pageNumber) => (
+                        <TouchableRipple
+                          style={{ padding: 5, borderRadius: 8 }}
+                          key={pageNumber}
+                          onPress={() => handlePageChange(pageNumber)}
+                          disabled={pageNumber === currentPage}
+                        >
+                          <BodyText
+                            style={{
+                              color:
+                                pageNumber === currentPage
+                                  ? colors.gray
+                                  : colors.primary.normal,
+                            }}
+                          >
+                            {pageNumber}
+                          </BodyText>
+                        </TouchableRipple>
+                      ))}
+                    </View>
+                  )}
                 />
               </>
             ) : (
