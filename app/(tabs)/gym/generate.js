@@ -1,20 +1,13 @@
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import React, { useEffect, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
-import {
-  BodyText,
-  HeaderText,
-  SubHeaderText,
-} from "../../../components/StyledText";
+import { BodyText } from "../../../components/StyledText";
 import StyledButton from "../../../components/StyledButton";
 import useGym from "../../../hooks/useGym";
 import { useAuthContext } from "../../../hooks/useAuthContext";
-import decodeToken from "../../../helpers/decodeToken";
 import { colors } from "../../../helpers/theme";
-import ErrorModal from "../../../components/ErrorModal";
 import InputFields from "../../../components/InputFields";
 import useDecode from "../../../hooks/useDecode";
-import Toast from "../../../components/Toast";
 import { useRouter } from "expo-router";
 import Portal from "react-native-paper/src/components/Portal/Portal";
 import { Snackbar } from "react-native-paper";

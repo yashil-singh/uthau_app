@@ -1,18 +1,11 @@
-import {
-  View,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
-import React, { useCallback, useEffect, useState } from "react";
+import { View, ScrollView, ActivityIndicator } from "react-native";
+import React, { useEffect, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
 import { Feather } from "@expo/vector-icons";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { HeaderText, SubHeaderText } from "../../../components/StyledText";
 import { colors } from "../../../helpers/theme";
 import CircularProgress from "react-native-circular-progress-indicator";
 import MealTable from "../../../components/MealTable";
-import StyledButton from "../../../components/StyledButton";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useAuthContext } from "../../../hooks/useAuthContext";
 import { AntDesign } from "react-native-vector-icons";
@@ -22,7 +15,6 @@ import { TouchableRipple } from "react-native-paper";
 import useDecode from "../../../hooks/useDecode";
 
 const foodLog = () => {
-  const router = useRouter();
   const { user } = useAuthContext();
 
   // Import hooks related to food

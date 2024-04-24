@@ -279,6 +279,7 @@ router.post("/weight/log", async (req, res) => {
   const client = await pool.connect();
   try {
     const { user_id, weight, date } = req.body;
+    console.log("🚀 ~ date:", date);
 
     if (!user_id || !weight) {
       return res.status(400).json({ message: "Invalid request." });
@@ -290,11 +291,14 @@ router.post("/weight/log", async (req, res) => {
 
     const currentDate = new Date();
     const logDate = new Date(date);
+    logDate.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
 
     const logCheck = await pool.query(
       `SELECT * FROM weight_progress WHERE user_id = $1 AND log_date = $2`,
       [user_id, logDate]
     );
+
     if (logCheck.rowCount > 0) {
       return res
         .status(400)
@@ -323,12 +327,6 @@ router.post("/weight/log", async (req, res) => {
       [user_id, weight, date]
     );
 
-    logDate.setHours(0, 0, 0, 0);
-    currentDate.setHours(0, 0, 0, 0);
-
-    console.log("🚀 ~ logDate:", logDate);
-    console.log("🚀 ~ currentDate:", currentDate);
-    console.log(logDate.toISOString() === currentDate.toISOString());
     if (logDate.toISOString() === currentDate.toISOString()) {
       await client.query(`UPDATE users SET weight =$1 WHERE user_id = $2`, [
         weight,
@@ -386,7 +384,7 @@ router.post("/add/trainer", async (req, res) => {
       return res.status(400).json({ message: "Email is already in use." });
     }
 
-    const password = crypto.randomBytes(8).toString("hex");
+    const password = crypto.randomBytes(3).toString("hex");
     console.log("🚀 ~ password:", password);
 
     const salt = await bcrypt.genSalt(10);

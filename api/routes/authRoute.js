@@ -285,9 +285,9 @@ router.post("/register", async (req, res) => {
     const age = calculateAge(dob);
 
     if (gender === "Male") {
-      bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+      bmr = 9.65 * weight + (573 * height) / 100 - 5.08 * age + 260;
     } else {
-      bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+      bmr = 7.38 * weight + (607 * height) / 100 - 2.31 * age + 43;
     }
 
     if (activityLevel == "Not Active") {

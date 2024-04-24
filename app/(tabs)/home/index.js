@@ -1,5 +1,4 @@
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
-import dayjs from "dayjs";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -85,7 +84,6 @@ const index = () => {
   const [lineChartData, setLineChartData] = useState([]);
 
   const [date, setDate] = useState(new Date());
-
   const [totalCalorieIntake, setTotalCalorieIntake] = useState(0);
 
   const [appPresent, setAppPresent] = useState(false);
@@ -130,7 +128,7 @@ const index = () => {
 
       if (response.success) {
         const totalCalories = mealTotals.reduce(
-          (total, meal) => total + meal.total_calories,
+          (total, meal) => (total += parseFloat(meal.total_calories)),
           0
         );
 
@@ -234,6 +232,7 @@ const index = () => {
       weight: weight,
       date: logDate,
     });
+    console.log("🚀 ~ logDate:", logDate);
 
     if (response.success) {
       setOpenToast(true);
@@ -246,7 +245,7 @@ const index = () => {
       }, 1500);
 
       setWeight("");
-      setDate(dayjs());
+      setDate(new Date());
       setResponseMessage("");
       setIsWeightInvalid(false);
       setInvalidWeightMessage("");
@@ -276,6 +275,7 @@ const index = () => {
   const onDateChange = ({ type }, selectedDate) => {
     if (type == "set") {
       const currentDate = selectedDate;
+      console.log("🚀 ~ selectedDate:", selectedDate);
 
       if (Platform.OS === "android") {
         setOpenDatePicker(false);
@@ -289,7 +289,7 @@ const index = () => {
   const openPermissionScreen = async () => {
     const permissionGranted = await requestPermission(
       [
-        { accessType: "read", recordType: "ActiveCaloriesBurned" },
+        { accessType: "read", recordType: "TotalCaloriesBurned" },
         { accessType: "read", recordType: "Steps" },
       ],
       "com.google.android.apps.healthdata"
@@ -353,7 +353,7 @@ const index = () => {
                 <StyledDatePicker
                   title="Date"
                   placeholder={"Date"}
-                  value={formatDate(new Date(logDate), "yyyy-MM-dd")}
+                  value={format(new Date(logDate), "yyyy-MM-dd")}
                   onPress={() => setOpenDatePicker(true)}
                   isEditable={false}
                 />

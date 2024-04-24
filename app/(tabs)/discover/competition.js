@@ -1,11 +1,8 @@
 import {
   View,
-  Text,
   FlatList,
-  Pressable,
   TouchableOpacity,
   Modal,
-  Dimensions,
   ActivityIndicator,
 } from "react-native";
 import React from "react";
@@ -535,64 +532,6 @@ const competition = () => {
               </BodyText>
             </View>
           )}
-
-          {/* <Pressable
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-            onPress={() => setShowExpired(!showExpired)}
-          >
-            <HeaderText style={{ fontSize: 18 }}>
-              Expired Competitions ({expiredCompetitions.length})
-            </HeaderText>
-            {showExpired ? (
-              <MaterialCommunityIcons
-                name="chevron-up"
-                size={24}
-                color="black"
-              />
-            ) : (
-              <MaterialCommunityIcons
-                name="chevron-down"
-                size={24}
-                color="black"
-              />
-            )}
-          </Pressable>
-          {showExpired && (
-            <FlatList
-              horizontal
-              data={expiredCompetitions}
-              renderItem={(comp) => (
-                <View
-                  key={comp.index}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.lightGray,
-                    borderRadius: 6,
-                    padding: 10,
-                    width: Dimensions.get("window").width - 100,
-                    maxWidth: Dimensions.get("window").width - 100,
-                    marginRight: 10,
-                  }}
-                >
-                  <HeaderText>{comp.item.title}</HeaderText>
-                  <BodyText style={{ color: colors.gray }}>
-                    Price: Rs {comp.item.entry_fee}
-                  </BodyText>
-                  <BodyText style={{ color: colors.gray }}>
-                    Start Date: {comp.item.start_date}
-                  </BodyText>
-                  <BodyText style={{ color: colors.gray }}>
-                    Entry Deadline: {comp.item.entry_deadline}
-                  </BodyText>
-                </View>
-              )}
-              showsVerticalScrollIndicator={false}
-            />
-          )} */}
         </View>
       )}
     </MainContainer>

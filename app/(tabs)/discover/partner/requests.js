@@ -8,7 +8,6 @@ import {
 import React, { useState, useEffect } from "react";
 import { useUsers } from "../../../../hooks/useUsers";
 import { useAuthContext } from "../../../../hooks/useAuthContext";
-import decodeToken from "../../../../helpers/decodeToken";
 import * as Location from "expo-location";
 import { colors } from "../../../../helpers/theme";
 import {

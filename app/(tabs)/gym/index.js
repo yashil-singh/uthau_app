@@ -1,10 +1,8 @@
 import {
   View,
-  Text,
   ActivityIndicator,
   FlatList,
   Modal,
-  KeyboardAvoidingView,
   Pressable,
 } from "react-native";
 import React, { useEffect, useState } from "react";

@@ -42,9 +42,9 @@ const useHealthData = () => {
       let stepsResult;
       let activeCalories;
       try {
-        // caloriesResult = await readRecords("TotalCaloriesBurned", {
-        //   timeRangeFilter: timeRangeFilter,
-        // });
+        caloriesResult = await readRecords("TotalCaloriesBurned", {
+          timeRangeFilter: timeRangeFilter,
+        });
 
         activeCalories = await readRecords("ActiveCaloriesBurned", {
           timeRangeFilter: timeRangeFilter,
@@ -64,7 +64,7 @@ const useHealthData = () => {
       const totalSteps = stepsResult
         .reduce((sum, curr) => sum + curr.count, 0)
         .toFixed();
-      const totalCalories = activeCalories
+      const totalCalories = caloriesResult
         .reduce((sum, curr) => sum + curr.energy.inKilocalories, 0)
         .toFixed();
 

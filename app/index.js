@@ -2,7 +2,6 @@ import { Redirect, useRouter } from "expo-router";
 import { useAuthContext } from "../hooks/useAuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../helpers/theme";
-import { HeaderText } from "../components/StyledText";
 import StyledButton from "../components/StyledButton";
 import { Dimensions, Image, View } from "react-native";
 import logo from "../assets/icon.png";

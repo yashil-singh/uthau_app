@@ -23,7 +23,6 @@ import { useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import StyledButton from "../../../components/StyledButton";
 import useFood from "../../../hooks/useFood";
-import Toast from "../../../components/Toast";
 
 const searchFood = () => {
   // Import hooks related to food
@@ -51,7 +50,6 @@ const searchFood = () => {
   const [selectedServing, setSelectedServing] = useState(null);
   const [quantity, setQuantity] = useState("1");
   const [selectedMeal, setSelectedMeal] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [isDisabled, setIsDisabled] = useState(false);
   const [isLogLoading, setIsLogLoading] = useState(false);
   const [isLogDisabled, setIsLogDisabled] = useState(false);

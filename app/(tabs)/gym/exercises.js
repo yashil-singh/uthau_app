@@ -1,9 +1,7 @@
 import {
   View,
-  Text,
   ActivityIndicator,
   FlatList,
-  Dimensions,
   Modal,
   Image,
   ScrollView,
@@ -273,56 +271,62 @@ const exercises = () => {
             onRefresh={fetchRecommendations}
             ListHeaderComponent={() => (
               <>
-                <StyledButton
-                  title={"Update Recommendations"}
-                  onPress={generateRecommendations}
-                  isDisabled={isSubmitting}
-                  isLoading={isSubmitting}
-                />
+                {filterRecommendations().length !== 0 && (
+                  <>
+                    <StyledButton
+                      title={"Update Recommendations"}
+                      onPress={generateRecommendations}
+                      isDisabled={isSubmitting}
+                      isLoading={isSubmitting}
+                    />
 
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    marginTop: 15,
-                  }}
-                >
-                  <TouchableRipple
-                    borderless
-                    style={{ borderRadius: 100, padding: 5 }}
-                    onPress={navigatePrev}
-                    disabled={currentPageIndex < 1}
-                  >
-                    <Entypo
-                      name="chevron-left"
-                      size={24}
-                      color={currentPageIndex < 1 ? colors.gray : colors.black}
-                    />
-                  </TouchableRipple>
-                  <HeaderText>
-                    {formatWord(
-                      (currentPageTitle === "upper arms" && "arms") ||
-                        (currentPageTitle === "upper legs" && "legs") ||
-                        currentPageTitle
-                    )}
-                  </HeaderText>
-                  <TouchableRipple
-                    borderless
-                    style={{ borderRadius: 100, padding: 5 }}
-                    onPress={navigateNext}
-                    disabled={currentPageIndex > bodyPart.length - 1}
-                  >
-                    <Entypo
-                      name="chevron-right"
-                      size={24}
-                      color={
-                        currentPageIndex > bodyPart.length - 1
-                          ? colors.gray
-                          : colors.black
-                      }
-                    />
-                  </TouchableRipple>
-                </View>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        marginTop: 15,
+                      }}
+                    >
+                      <TouchableRipple
+                        borderless
+                        style={{ borderRadius: 100, padding: 5 }}
+                        onPress={navigatePrev}
+                        disabled={currentPageIndex < 1}
+                      >
+                        <Entypo
+                          name="chevron-left"
+                          size={24}
+                          color={
+                            currentPageIndex < 1 ? colors.gray : colors.black
+                          }
+                        />
+                      </TouchableRipple>
+                      <HeaderText>
+                        {formatWord(
+                          (currentPageTitle === "upper arms" && "arms") ||
+                            (currentPageTitle === "upper legs" && "legs") ||
+                            currentPageTitle
+                        )}
+                      </HeaderText>
+                      <TouchableRipple
+                        borderless
+                        style={{ borderRadius: 100, padding: 5 }}
+                        onPress={navigateNext}
+                        disabled={currentPageIndex > bodyPart.length - 1}
+                      >
+                        <Entypo
+                          name="chevron-right"
+                          size={24}
+                          color={
+                            currentPageIndex > bodyPart.length - 1
+                              ? colors.gray
+                              : colors.black
+                          }
+                        />
+                      </TouchableRipple>
+                    </View>
+                  </>
+                )}
               </>
             )}
             renderItem={({ index, item }) => (

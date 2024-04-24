@@ -8,8 +8,7 @@ import {
 } from "../../../components/StyledText";
 import DropdownPicker from "../../../components/DropdownPicker";
 import { useAuthContext } from "../../../hooks/useAuthContext";
-import decodeToken from "../../../helpers/decodeToken";
-import { useNavigation, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import useGym from "../../../hooks/useGym";
 import { colors } from "../../../helpers/theme";
 import ErrorModal from "../../../components/ErrorModal";

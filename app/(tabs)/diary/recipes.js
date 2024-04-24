@@ -1,24 +1,21 @@
 import {
   View,
-  Text,
   Modal,
   ActivityIndicator,
   FlatList,
   Image,
   StyleSheet,
 } from "react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
 import useRecipes from "../../../hooks/useRecipes";
 import { useAuthContext } from "../../../hooks/useAuthContext";
-import decodeToken from "../../../helpers/decodeToken";
 import {
   BodyText,
   HeaderText,
   LinkText,
   SubHeaderText,
 } from "../../../components/StyledText";
-import { useFocusEffect } from "expo-router";
 import { colors } from "../../../helpers/theme";
 import CardOption from "../../../components/CardOption";
 import { Portal, Snackbar, TouchableRipple } from "react-native-paper";
@@ -26,7 +23,6 @@ import { Feather } from "@expo/vector-icons";
 import { FontAwesome } from "@expo/vector-icons";
 import ErrorModal from "../../../components/ErrorModal";
 import useDecode from "../../../hooks/useDecode";
-import Toast from "../../../components/Toast";
 
 const recipes = () => {
   // Get user token

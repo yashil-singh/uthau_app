@@ -1,7 +1,6 @@
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { useEffect, useState } from "react";
 import MainContainer from "../../../../components/MainContainer";
-import OptionsContainer from "../../../../components/OptionsContainer";
 import { BodyText, HeaderText } from "../../../../components/StyledText";
 import { colors } from "../../../../helpers/theme";
 import { Feather } from "@expo/vector-icons";

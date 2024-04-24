@@ -6,8 +6,6 @@ import {
   Modal,
   Image,
   Pressable,
-  Alert,
-  TouchableOpacity,
 } from "react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
@@ -25,7 +23,6 @@ import { Feather } from "@expo/vector-icons";
 import { TouchableRipple } from "react-native-paper";
 import { FontAwesome } from "@expo/vector-icons";
 import { useAuthContext } from "../../../hooks/useAuthContext";
-import decodeToken from "../../../helpers/decodeToken";
 import { useFocusEffect } from "expo-router";
 import ErrorModal from "../../../components/ErrorModal";
 import breakfast from "../../../assets/images/breakfast.png";

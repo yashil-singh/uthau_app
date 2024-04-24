@@ -181,8 +181,8 @@ router.post("/initialize", async (req, res) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        return_url: "http://192.168.101.2:4000/payment/callback",
-        website_url: "http://192.168.101.2:4000",
+        return_url: "http://192.168.101.3:4000/payment/callback",
+        website_url: "http://192.168.101.3:4000",
         amount: amount * 100,
         purchase_order_id: order_id,
         purchase_order_name: order_name,
@@ -251,7 +251,7 @@ router.get("/callback", async (req, res) => {
 
     if (response.data.status !== "Completed") {
       await pool.query(
-        `UPDATE payments SET status = $1, payment_type =  WHERE payment_id = $2`,
+        `UPDATE payments SET status = $1, payment_type = 'khalti' WHERE payment_id = $2`,
         [status, purchase_order_id]
       );
       return res.send(

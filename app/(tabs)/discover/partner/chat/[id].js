@@ -23,7 +23,6 @@ import { TouchableRipple } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { io } from "socket.io-client";
 import { useAuthContext } from "../../../../../hooks/useAuthContext";
-import decodeToken from "../../../../../helpers/decodeToken";
 import { apiURL, socketURL } from "../../../../../helpers/constants";
 import axios from "axios";
 import useDecode from "../../../../../hooks/useDecode";

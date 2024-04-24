@@ -8,10 +8,9 @@ import {
   Pressable,
   Platform,
 } from "react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
 import { useAuthContext } from "../../../hooks/useAuthContext";
-import decodeToken from "../../../helpers/decodeToken";
 import useExercise from "../../../hooks/useExercise";
 import { colors } from "../../../helpers/theme";
 import CardOption from "../../../components/CardOption";
@@ -23,10 +22,8 @@ import {
 import formatWord from "../../../helpers/formatWord";
 import { Feather } from "@expo/vector-icons";
 import { FontAwesome } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
 import ErrorModal from "../../../components/ErrorModal";
 import useDecode from "../../../hooks/useDecode";
-import Toast from "../../../components/Toast";
 import { Portal, Snackbar, TouchableRipple } from "react-native-paper";
 
 const exercises = () => {

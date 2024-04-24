@@ -20,7 +20,6 @@ import { useFocusEffect, useRouter } from "expo-router";
 import * as Location from "expo-location";
 import { useUsers } from "../../../../hooks/useUsers";
 import { useAuthContext } from "../../../../hooks/useAuthContext";
-import decodeToken from "../../../../helpers/decodeToken";
 import ErrorModal from "../../../../components/ErrorModal";
 import { Badge } from "react-native-paper";
 import { userRadius } from "../../../../helpers/constants";

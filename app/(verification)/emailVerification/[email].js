@@ -6,7 +6,6 @@ import { BodyText } from "../../../components/StyledText";
 import useResendVerification from "../../../hooks/useResendVerification";
 import { colors } from "../../../helpers/theme";
 import { useLogout } from "../../../hooks/useLogout";
-import { decode as atob, encode as btoa } from "base-64";
 import { FontAwesome } from "@expo/vector-icons";
 import { Entypo } from "@expo/vector-icons";
 import useDecode from "../../../hooks/useDecode";
@@ -17,7 +16,6 @@ const emailVerification = () => {
 
   const { logout } = useLogout();
 
-  const { user } = useAuthContext();
   const { getDecodedToken } = useDecode();
 
   let userDetails;

@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
 import AccountContainer from "../../../components/AccountContainer";
 import { useAuthContext } from "../../../hooks/useAuthContext";
-import decodeToken from "../../../helpers/decodeToken";
 import { BodyText, HeaderText } from "../../../components/StyledText";
 import { colors } from "../../../helpers/theme";
 import { useUsers } from "../../../hooks/useUsers";

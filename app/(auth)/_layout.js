@@ -2,13 +2,10 @@ import { Stack, useNavigation } from "expo-router";
 import { useAuthContext } from "../../hooks/useAuthContext";
 import { useEffect } from "react";
 import { RegisterContextProvider } from "../../context/RegisterContext";
-import decodeToken from "../../helpers/decodeToken";
 import useDecode from "../../hooks/useDecode";
 
 export default function Layout() {
   const { user } = useAuthContext();
-  // const decodedToken = decodeToken(user);
-  // const userDetails = decodedToken?.user;
 
   let userDetails;
 

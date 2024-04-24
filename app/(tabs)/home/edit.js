@@ -1,17 +1,9 @@
-import {
-  View,
-  Text,
-  Pressable,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { View, Pressable, ActivityIndicator, Platform } from "react-native";
 import React, { useEffect, useState } from "react";
 import MainContainer from "../../../components/MainContainer";
 import AccountContainer from "../../../components/AccountContainer";
 import InputFields from "../../../components/InputFields";
 import { useAuthContext } from "../../../hooks/useAuthContext";
-import decodeToken from "../../../helpers/decodeToken";
 import { BodyText, HeaderText, LinkText } from "../../../components/StyledText";
 import { colors } from "../../../helpers/theme";
 import {
@@ -20,8 +12,6 @@ import {
   ref,
   uploadBytes,
 } from "firebase/storage";
-import { storage, database } from "../../../config";
-import { ref as dbRef, set } from "firebase/database";
 import { useUsers } from "../../../hooks/useUsers";
 import ErrorModal from "../../../components/ErrorModal";
 import { useForm, Controller } from "react-hook-form";
@@ -108,42 +98,6 @@ const edit = () => {
       setModalTitle("Error uploading image");
       setErrorMessage("Please try again later.");
     }
-    // } else {
-    //   try {
-    //     const blob = await new Promise((resolve, reject) => {
-    //       const xhr = new XMLHttpRequest();
-    //       xhr.onload = () => {
-    //         resolve(xhr.response);
-    //       };
-    //       xhr.onerror = (e) => {
-    //         reject(new TypeError("Network request failed."));
-    //       };
-    //       xhr.responseType = "blob";
-    //       xhr.open("GET", fileUri, true);
-    //       xhr.send(null);
-    //     });
-
-    //     const filename = image.substring(image.lastIndexOf("/") + 1);
-
-    //     const storageRef = firebase.storage().ref();
-    //     const imageRef = storageRef.child(filename);
-
-    //     await imageRef.put(blob);
-    //     setUploading(false);
-
-    //     await getDownloadURL(imageRef).then((url) => {
-    //       setValue("image", url);
-    //     });
-
-    //     return imageRef;
-    //   } catch (error) {
-    //     console.log("🚀 ~ error uploading image:", error);
-    //     setUploading(false);
-    //     setOpenErrorModal(true);
-    //     setModalTitle("Error uploading image");
-    //     setErrorMessage("Please try again later.");
-    //   }
-    // }
   };
 
   const onPickImage = async () => {

@@ -2,9 +2,11 @@ import axios from "axios";
 import { apiURL } from "../helpers/constants";
 import { useAuthContext } from "./useAuthContext";
 import { useEffect } from "react";
+import { useRouter } from "expo-router";
 
 const useDecode = () => {
-  const { user } = useAuthContext();
+  const { user, dispatch } = useAuthContext();
+  const router = useRouter();
 
   useEffect(() => {
     axios.interceptors.request.use((config) => {

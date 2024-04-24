@@ -17,7 +17,6 @@ import {
 import { useUsers } from "../../../../hooks/useUsers";
 import { useAuthContext } from "../../../../hooks/useAuthContext";
 import * as Location from "expo-location";
-import decodeToken from "../../../../helpers/decodeToken";
 import ErrorModal from "../../../../components/ErrorModal";
 import { useRouter } from "expo-router";
 import { colors } from "../../../../helpers/theme";

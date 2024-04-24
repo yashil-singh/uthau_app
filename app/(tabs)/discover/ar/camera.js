@@ -1,11 +1,4 @@
-import {
-  StyleSheet,
-  View,
-  Platform,
-  TouchableHighlight,
-  Text,
-  Modal,
-} from "react-native";
+import { StyleSheet, View, Platform, Modal } from "react-native";
 import { ArViewerView } from "react-native-ar-viewer";
 import RNFS from "react-native-fs";
 import { colors } from "../../../../helpers/theme";
